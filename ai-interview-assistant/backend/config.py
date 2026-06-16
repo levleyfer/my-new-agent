@@ -11,7 +11,12 @@ class Settings(BaseSettings):
     WHISPER_MODEL: str = "base"
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_MB: int = 25
-    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:80", "http://localhost"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:80",
+        "http://localhost",
+        "https://frontend-ruddy-phi-26.vercel.app",
+    ]
     DEBUG: bool = False
 
     class Config:
