@@ -42,11 +42,11 @@ export default function AnalyticsPage() {
   const { lang } = useLangStore();
   const T = translations[lang];
 
-  const { data: summary, isLoading: summaryLoading, isError: summaryError, refetch: summaryRefetch } = useQuery({ queryKey: ["analytics-summary"], queryFn: getAnalyticsSummary });
-  const { data: progress, isLoading: progressLoading } = useQuery({ queryKey: ["analytics-progress"], queryFn: getAnalyticsProgress });
-  const { data: weaknesses, isLoading: weaknessLoading } = useQuery({ queryKey: ["analytics-weaknesses"], queryFn: getAnalyticsWeaknesses });
-  const { data: fillerWords, isLoading: fillerLoading } = useQuery({ queryKey: ["analytics-filler-words"], queryFn: getAnalyticsFillerWords });
-  const { data: categoryData, isLoading: categoryLoading } = useQuery({ queryKey: ["analytics-category"], queryFn: getAnalyticsCategoryBreakdown });
+  const { data: summary, isLoading: summaryLoading, isError: summaryError, refetch: summaryRefetch } = useQuery({ queryKey: ["analytics-summary"], queryFn: getAnalyticsSummary, staleTime: 0 });
+  const { data: progress, isLoading: progressLoading } = useQuery({ queryKey: ["analytics-progress"], queryFn: getAnalyticsProgress, staleTime: 0 });
+  const { data: weaknesses, isLoading: weaknessLoading } = useQuery({ queryKey: ["analytics-weaknesses"], queryFn: getAnalyticsWeaknesses, staleTime: 0 });
+  const { data: fillerWords, isLoading: fillerLoading } = useQuery({ queryKey: ["analytics-filler-words"], queryFn: getAnalyticsFillerWords, staleTime: 0 });
+  const { data: categoryData, isLoading: categoryLoading } = useQuery({ queryKey: ["analytics-category"], queryFn: getAnalyticsCategoryBreakdown, staleTime: 0 });
 
   const progressData = progress?.data_points ?? [];
   const weaknessData = (weaknesses?.common_weaknesses ?? []).slice(0, 8);
@@ -123,28 +123,30 @@ export default function AnalyticsPage() {
         </div>
       ) : null}
 
-      {/* Weakness chart — full width so long labels have room */}
+      {/* Weaknesses list */}
       {weaknessLoading ? (
         <div className="mb-5 rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-card">
-          <Skeleton className="mb-5 h-5 w-48" /><Skeleton className="h-[200px] w-full" />
+          <Skeleton className="mb-5 h-5 w-48" />
+          <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-4 w-full" />)}</div>
         </div>
       ) : weaknessData.length > 0 ? (
         <div className="mb-5 rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-card">
           <h2 className="mb-5 text-[15px] font-semibold text-gray-900 dark:text-white">{T.chart_weaknesses}</h2>
-          <ResponsiveContainer width="100%" height={weaknessData.length * 42 + 24}>
-            <BarChart data={weaknessData} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
-              <XAxis type="number" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, (dataMax: number) => Math.max(dataMax, 1)]} />
-              <YAxis dataKey="weakness" type="category" width={190} axisLine={false} tickLine={false}
-                tick={({ x, y, payload }: any) => {
-                  const raw: string = payload.value ?? "";
-                  const label = raw.length > 32 ? raw.slice(0, 29) + "…" : raw;
-                  return <text x={x} y={y} dy={4} textAnchor="end" fill="#6b7280" fontSize={11}>{label}</text>;
-                }}
-              />
-              <Tooltip contentStyle={{ ...tooltipStyle, fontSize: 12 }} formatter={(v: number) => [v, "Count"]} />
-              <Bar dataKey="count" fill="#f87171" radius={[0, 6, 6, 0]} maxBarSize={22} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="space-y-2.5">
+            {weaknessData.map((w: any, i: number) => (
+              <div key={i} className="flex items-start gap-3 rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50 text-[11px] font-bold text-red-500 dark:text-red-400">
+                  {i + 1}
+                </span>
+                <p className="flex-1 text-sm text-gray-700 dark:text-gray-200 leading-snug">{w.weakness}</p>
+                {w.count > 1 && (
+                  <span className="shrink-0 rounded-full bg-red-100 dark:bg-red-900/50 px-2 py-0.5 text-[11px] font-semibold text-red-500 dark:text-red-400">
+                    ×{w.count}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 

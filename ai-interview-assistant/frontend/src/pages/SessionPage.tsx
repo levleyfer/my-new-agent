@@ -63,6 +63,7 @@ export default function SessionPage() {
   const { lang } = useLangStore();
   const T = translations[lang];
   const resultsRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [exporting, setExporting] = useState(false);
 
   const { data: session, isLoading, isError, refetch } = useQuery({
@@ -76,16 +77,45 @@ export default function SessionPage() {
   const transcript = session?.transcript;
   const question = session?.question;
 
-  const { data: audioUrl } = useQuery({
-    queryKey: ["session-audio", id],
-    queryFn: () => getSessionAudio(id!),
-    enabled: status === "completed",
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    return () => { if (audioUrl) URL.revokeObjectURL(audioUrl); };
+    if (status !== "completed") return;
+    let cancelled = false;
+    getSessionAudio(id!).then((url) => {
+      if (!cancelled) setAudioUrl(url);
+      else URL.revokeObjectURL(url);
+    });
+    return () => {
+      cancelled = true;
+      setAudioUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
+  }, [id, status]);
+
+  // Fix WebM duration metadata: MediaRecorder doesn't write duration in the header,
+  // so the browser reports Infinity. Seeking to a large time forces it to scan the file.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const fixDuration = () => {
+      if (audio.duration === Infinity || isNaN(audio.duration)) {
+        audio.currentTime = 1e10;
+      }
+    };
+    const onSeeked = () => {
+      if (audio.currentTime >= 1e9) audio.currentTime = 0;
+    };
+    audio.addEventListener("loadedmetadata", fixDuration);
+    audio.addEventListener("seeked", onSeeked);
+    // Metadata may already be available if the URL was cached
+    if (audio.readyState >= 1) fixDuration();
+    return () => {
+      audio.removeEventListener("loadedmetadata", fixDuration);
+      audio.removeEventListener("seeked", onSeeked);
+    };
   }, [audioUrl]);
 
   async function handleExport() {
@@ -217,7 +247,7 @@ export default function SessionPage() {
           {audioUrl && (
             <div className="mb-5 rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-card">
               <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">{T.audio_title}</h2>
-              <audio src={audioUrl} controls className="w-full rounded-xl" />
+              <audio ref={audioRef} src={audioUrl} controls className="w-full rounded-xl" />
             </div>
           )}
 

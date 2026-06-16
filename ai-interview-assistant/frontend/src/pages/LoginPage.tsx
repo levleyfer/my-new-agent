@@ -55,6 +55,7 @@ export default function LoginPage() {
           <span className="text-xl font-bold tracking-tight">InterviewAI</span>
         </div>
         <div className="mt-auto z-10">
+          <img src="/interview-1.png" alt="Interview illustration" className="w-64 mx-auto mb-8 opacity-90 drop-shadow-xl" />
           <h2 className="text-4xl font-bold leading-tight mb-4">Ace your<br />next interview</h2>
           <p className="text-indigo-200 text-[15px] mb-10 leading-relaxed">Record answers, get instant AI feedback, and track your improvement over time.</p>
           <div className="space-y-3.5">

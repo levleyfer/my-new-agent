@@ -301,7 +301,11 @@ async def delete_session(
 ):
     result = await db.execute(
         select(Session)
-        .options(selectinload(Session.recording))
+        .options(
+            selectinload(Session.recording),
+            selectinload(Session.transcript),
+            selectinload(Session.analysis),
+        )
         .where(Session.id == session_id)
     )
     session = result.scalar_one_or_none()
@@ -316,6 +320,12 @@ async def delete_session(
         if audio_path.exists():
             audio_path.unlink(missing_ok=True)
 
+    if session.analysis:
+        await db.delete(session.analysis)
+    if session.transcript:
+        await db.delete(session.transcript)
+    if session.recording:
+        await db.delete(session.recording)
     await db.delete(session)
     await db.commit()
 

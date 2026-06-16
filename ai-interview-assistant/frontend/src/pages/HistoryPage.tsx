@@ -22,9 +22,13 @@ export default function HistoryPage() {
   async function handleDelete(e: React.MouseEvent, id: string) {
     e.preventDefault();
     if (!confirm(T.confirm_delete)) return;
-    await deleteSession(id);
-    queryClient.invalidateQueries({ queryKey: ["sessions"] });
-    queryClient.invalidateQueries({ queryKey: ["analytics-summary"] });
+    try {
+      await deleteSession(id);
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics-summary"] });
+    } catch {
+      alert("Failed to delete session. Please try again.");
+    }
   }
 
   function statusBadge(s: any) {

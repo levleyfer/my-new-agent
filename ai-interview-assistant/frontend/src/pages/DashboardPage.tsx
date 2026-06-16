@@ -34,7 +34,7 @@ export default function DashboardPage() {
   const T = translations[lang];
 
   const { data: summary, isLoading: summaryLoading, isError: summaryError, refetch: summaryRefetch } = useQuery({
-    queryKey: ["analytics-summary"], queryFn: getAnalyticsSummary,
+    queryKey: ["analytics-summary"], queryFn: getAnalyticsSummary, staleTime: 0,
   });
   const { data: sessions, isLoading: sessionsLoading, isError: sessionsError, refetch: sessionsRefetch } = useQuery({
     queryKey: ["sessions", { limit: 5 }], queryFn: () => getSessions({ limit: 5 }),

@@ -31,6 +31,7 @@ export default function RegisterPage() {
     try {
       await register(email, fullName, password);
       const tokens = await login(email, password);
+      useAuthStore.getState().setTokens(tokens.access_token, tokens.refresh_token);
       const user = await getMe();
       storeLogin(user, tokens.access_token, tokens.refresh_token);
       navigate("/dashboard", { replace: true });
