@@ -1,0 +1,14 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+# Env / secrets
+.env
+*.env
+!.env.example
+# Node / RN
+node_modules/
+.expo/
+# OS / IDE
+.DS_Store
+.vscode/
