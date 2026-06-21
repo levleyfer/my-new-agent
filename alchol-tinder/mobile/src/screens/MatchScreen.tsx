@@ -5,6 +5,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { blockUser, rateMatch, reportUser, startVirtualCheers } from '../api/client';
 import { ApiError, ReportReason } from '../api/types';
+import Avatar from '../components/Avatar';
+import OnlineBadge from '../components/OnlineBadge';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 import SafetyMenu from '../components/SafetyMenu';
@@ -70,11 +72,16 @@ export default function MatchScreen({ route, navigation }: Props) {
 
   return (
     <ScreenContainer style={styles.container}>
-      <Text style={styles.emoji}>🥂</Text>
+      <View style={styles.avatarRow}>
+        <Avatar avatarUrl={match.other_user.avatar_url} displayName={match.other_user.display_name} size={72} />
+      </View>
       <Text style={[typography.title, styles.title]}>
         You matched with {match.other_user.display_name}!
       </Text>
-      <Text style={[typography.subtitle, styles.meta]}>{match.compatibility_score} shared tags</Text>
+      <Text style={typography.subtitle}>{match.compatibility_score} shared tags</Text>
+      <View style={styles.onlineRow}>
+        <OnlineBadge isOnline={match.other_user.is_online} />
+      </View>
 
       <View style={styles.safetyBox}>
         <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
@@ -90,7 +97,7 @@ export default function MatchScreen({ route, navigation }: Props) {
       <View style={styles.chatButtonSpacing}>
         <PrimaryButton
           title={`Message ${match.other_user.display_name}`}
-          onPress={() => navigation.navigate('Chat', { match })}
+          onPress={() => navigation.navigate('Chat', { matchId: match.id })}
           variant="ghost"
         />
       </View>
@@ -131,9 +138,9 @@ export default function MatchScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { padding: spacing.xl, justifyContent: 'center' },
-  emoji: { fontSize: 40, textAlign: 'center', marginBottom: spacing.sm },
+  avatarRow: { alignItems: 'center', marginBottom: spacing.md },
   title: { textAlign: 'center' },
-  meta: { textAlign: 'center', marginBottom: spacing.xl },
+  onlineRow: { alignItems: 'center', marginTop: spacing.xs, marginBottom: spacing.xl },
   chatButtonSpacing: { marginTop: spacing.md },
   rateBox: { alignItems: 'center', marginTop: spacing.xl },
   rateLabel: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm },

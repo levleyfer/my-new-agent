@@ -89,6 +89,30 @@ export function verifyMyAge(token: string): Promise<MyProfile> {
   return request('/users/me/verify', { method: 'POST', token });
 }
 
+export async function uploadAvatar(token: string, fileUri: string, mimeType: string): Promise<MyProfile> {
+  const blob = await (await fetch(fileUri)).blob();
+  const extension = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
+  const formData = new FormData();
+  formData.append('file', blob, `avatar.${extension}`);
+
+  // Don't set Content-Type manually here — the browser needs to generate the
+  // multipart boundary itself, which only happens if the header is left unset.
+  const response = await fetch(`${API_BASE_URL}/users/me/avatar`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!response.ok) {
+    const { message, details } = await parseErrorMessage(response);
+    throw new ApiError(response.status, message, details);
+  }
+  return response.json();
+}
+
+export function deleteAvatar(token: string): Promise<MyProfile> {
+  return request('/users/me/avatar', { method: 'DELETE', token });
+}
+
 export function listTags(): Promise<Tag[]> {
   return request('/tags');
 }
@@ -103,6 +127,10 @@ export function createMatch(token: string, targetUserId: string): Promise<Match>
 
 export function listMyMatches(token: string): Promise<Match[]> {
   return request('/matches', { token });
+}
+
+export function getMatch(token: string, matchId: string): Promise<Match> {
+  return request(`/matches/${matchId}`, { token });
 }
 
 export function startVirtualCheers(token: string, matchId: string): Promise<VideoSession> {

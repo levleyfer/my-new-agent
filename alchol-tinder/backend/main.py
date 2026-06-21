@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
+from src.core.media import MEDIA_ROOT
 from src.routers import auth, calls, discover, matches, safety, tags, users
 
 app = FastAPI(title="Social Drinking App API")
+app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
 
 # Dev-only: the Expo web client and this API run on different origins (e.g. a
 # forwarded dev tunnel for each). Auth uses Bearer tokens, not cookies, so an

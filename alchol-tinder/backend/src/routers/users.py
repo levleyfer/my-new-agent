@@ -1,12 +1,14 @@
 import uuid
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.database import get_db
 from src.core.deps import get_current_user
+from src.core.media import AVATAR_DIR
 from src.core.security import hash_password
 from src.models.tag import Tag
 from src.models.user import User, VerificationStatus
@@ -20,6 +22,17 @@ from src.schemas.user import (
 )
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+MAX_AVATAR_BYTES = 5 * 1024 * 1024
+_AVATAR_EXTENSIONS_BY_CONTENT_TYPE = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+
+
+def _delete_avatar_file(avatar_url: str | None) -> None:
+    if not avatar_url:
+        return
+    # .name strips any directory components, so this can never escape AVATAR_DIR
+    # even if avatar_url were ever malformed.
+    (AVATAR_DIR / Path(avatar_url).name).unlink(missing_ok=True)
 
 
 @router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
@@ -103,6 +116,42 @@ async def verify_my_age(
     """
     current_user.is_age_verified = True
     current_user.verification_status = VerificationStatus.verified
+    await db.commit()
+    await db.refresh(current_user, attribute_names=["tags"])
+    return current_user
+
+
+@router.post("/me/avatar", response_model=UserMeRead)
+async def upload_my_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    extension = _AVATAR_EXTENSIONS_BY_CONTENT_TYPE.get(file.content_type or "")
+    if not extension:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Avatar must be a JPEG, PNG, or WebP image")
+
+    content = await file.read()
+    if len(content) > MAX_AVATAR_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Avatar must be under 5MB")
+
+    _delete_avatar_file(current_user.avatar_url)
+    filename = f"{uuid.uuid4()}{extension}"
+    (AVATAR_DIR / filename).write_bytes(content)
+    current_user.avatar_url = f"/media/avatars/{filename}"
+
+    await db.commit()
+    await db.refresh(current_user, attribute_names=["tags"])
+    return current_user
+
+
+@router.delete("/me/avatar", response_model=UserMeRead)
+async def delete_my_avatar(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    _delete_avatar_file(current_user.avatar_url)
+    current_user.avatar_url = None
     await db.commit()
     await db.refresh(current_user, attribute_names=["tags"])
     return current_user

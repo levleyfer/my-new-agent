@@ -34,6 +34,11 @@ class User(Base):
     rating: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     is_available: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
+    # Relative path under /media (e.g. "/media/avatars/<uuid>.jpg") — never an
+    # absolute host, since the frontend's API base URL changes between dev
+    # setups (localhost vs. a tunnel); the client prefixes it at render time.
+    avatar_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     # Raw location is sensitive PII. Never return these fields directly to clients —
     # expose only a fuzzed distance (see core/safety.fuzz_distance_km).
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)

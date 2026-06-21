@@ -5,6 +5,8 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Tex
 
 import { listMyMatches } from '../api/client';
 import { ApiError, Match, MatchStatus } from '../api/types';
+import Avatar from '../components/Avatar';
+import OnlineBadge from '../components/OnlineBadge';
 import ScreenContainer from '../components/ScreenContainer';
 import { useAuth } from '../context/AuthContext';
 import { AppStackParamList } from '../navigation/types';
@@ -81,6 +83,7 @@ export default function MatchesScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('Match', { match: item })}
             >
               <View style={styles.cardHeader}>
+                <Avatar avatarUrl={item.other_user.avatar_url} displayName={item.other_user.display_name} size={36} />
                 <Text style={styles.cardName}>{item.other_user.display_name}</Text>
                 {item.other_user.verification_status === 'verified' && (
                   <Ionicons name="checkmark-circle" size={16} color={colors.success} />
@@ -89,7 +92,7 @@ export default function MatchesScreen({ navigation }: Props) {
                   style={styles.chatButton}
                   onPress={(e) => {
                     e.stopPropagation();
-                    navigation.navigate('Chat', { match: item });
+                    navigation.navigate('Chat', { matchId: item.id });
                   }}
                   hitSlop={6}
                 >
@@ -102,6 +105,8 @@ export default function MatchesScreen({ navigation }: Props) {
                 </Text>
                 <Text style={styles.cardMetaDot}>·</Text>
                 <Text style={styles.cardMeta}>{item.compatibility_score} shared tags</Text>
+                <Text style={styles.cardMetaDot}>·</Text>
+                <OnlineBadge isOnline={item.other_user.is_online} />
               </View>
             </Pressable>
           )}

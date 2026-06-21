@@ -24,6 +24,10 @@ class ConnectionManager:
         if not connections:
             del self._connections[user_id]
 
+    def is_connected(self, user_id: uuid.UUID) -> bool:
+        """Used to show online/offline status — see schemas/user.py UserRead.is_online."""
+        return bool(self._connections.get(user_id))
+
     async def send_to_user(self, user_id: uuid.UUID, message: dict) -> bool:
         """Returns True if at least one connection for this user received the message."""
         connections = list(self._connections.get(user_id, ()))

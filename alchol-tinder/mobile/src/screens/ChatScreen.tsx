@@ -13,8 +13,10 @@ import {
   View,
 } from 'react-native';
 
-import { listMessages, sendMessage } from '../api/client';
-import { ApiError, ChatMessage } from '../api/types';
+import { getMatch, listMessages, sendMessage } from '../api/client';
+import { ApiError, ChatMessage, Match } from '../api/types';
+import Avatar from '../components/Avatar';
+import OnlineBadge from '../components/OnlineBadge';
 import ScreenContainer from '../components/ScreenContainer';
 import { useAuth } from '../context/AuthContext';
 import { useIncomingCall } from '../context/IncomingCallContext';
@@ -23,10 +25,11 @@ import { colors, radii, spacing } from '../theme/theme';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 
-export default function ChatScreen({ route }: Props) {
-  const { match } = route.params;
+export default function ChatScreen({ route, navigation }: Props) {
+  const { matchId } = route.params;
   const { token, profile } = useAuth();
   const { lastMessage } = useIncomingCall();
+  const [match, setMatch] = useState<Match | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState('');
@@ -37,22 +40,31 @@ export default function ChatScreen({ route }: Props) {
     if (!token) return;
     setError(null);
     try {
-      setMessages(await listMessages(token, match.id));
+      const [matchResult, messagesResult] = await Promise.all([
+        getMatch(token, matchId),
+        listMessages(token, matchId),
+      ]);
+      setMatch(matchResult);
+      setMessages(messagesResult);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not load messages.');
+      setError(err instanceof ApiError ? err.message : 'Could not load this chat.');
     }
-  }, [token, match.id]);
+  }, [token, matchId]);
 
   useEffect(() => {
     load().finally(() => setLoading(false));
   }, [load]);
 
   useEffect(() => {
-    if (lastMessage?.matchId !== match.id) return;
+    if (match) navigation.setOptions({ title: match.other_user.display_name });
+  }, [match, navigation]);
+
+  useEffect(() => {
+    if (lastMessage?.matchId !== matchId) return;
     setMessages((prev) =>
       prev.some((m) => m.id === lastMessage.message.id) ? prev : [...prev, lastMessage.message],
     );
-  }, [lastMessage, match.id]);
+  }, [lastMessage, matchId]);
 
   const handleSend = async () => {
     const text = body.trim();
@@ -60,7 +72,7 @@ export default function ChatScreen({ route }: Props) {
     setError(null);
     setSending(true);
     try {
-      const message = await sendMessage(token, match.id, text);
+      const message = await sendMessage(token, matchId, text);
       setMessages((prev) => [...prev, message]);
       setBody('');
     } catch (err) {
@@ -76,8 +88,14 @@ export default function ChatScreen({ route }: Props) {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        {match && (
+          <View style={styles.statusRow}>
+            <Avatar avatarUrl={match.other_user.avatar_url} displayName={match.other_user.display_name} size={28} />
+            <OnlineBadge isOnline={match.other_user.is_online} />
+          </View>
+        )}
         {error && <Text style={styles.error}>{error}</Text>}
-        {loading ? (
+        {loading || !match ? (
           <ActivityIndicator color={colors.primary} style={styles.center} />
         ) : (
           <FlatList
@@ -136,6 +154,15 @@ export default function ChatScreen({ route }: Props) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1 },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   error: { color: colors.danger, textAlign: 'center', padding: spacing.sm },
   list: { padding: spacing.lg, flexGrow: 1, justifyContent: 'flex-end' },
   empty: { alignItems: 'center', marginTop: spacing.xxl, paddingHorizontal: spacing.xl },

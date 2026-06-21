@@ -1,25 +1,36 @@
-// Warm evening/bar palette — amber & wine tones on a dark, candlelit background.
+// Warm, dark nightlife palette — gold accents on a near-black, candlelit background.
 // Keep this as the single source of truth for color/spacing/type so every
 // screen stays visually consistent.
 
 export const colors = {
-  background: '#1b140f',
-  backgroundAlt: '#241a13',
-  surface: '#2a1f16',
-  surfaceRaised: '#33261b',
-  border: '#473527',
+  background: '#17120e',
+  backgroundAlt: '#221a13',
+  surface: '#221a13',
+  surfaceRaised: '#2c2113',
+  border: '#3a2d20',
 
-  primary: '#e2a554',
-  primaryMuted: '#7a5a36',
+  primary: '#d6a566',
+  primaryMuted: '#5a4527',
+  // Text color to use ON TOP of a solid gold/primary background (buttons, etc).
+  onPrimary: '#2a1d0e',
   accent: '#a8455c',
   accentMuted: '#5c2c39',
 
-  textPrimary: '#f5ebdd',
-  textSecondary: '#bda88f',
-  textMuted: '#8a7763',
+  textPrimary: '#f3ead9',
+  textSecondary: '#a8967c',
+  textMuted: '#80715c',
 
   danger: '#e2705a',
-  success: '#8caa6e',
+  success: '#7fbf5f',
+
+  // Gold-styled chip — used for tags shared with the current user.
+  chipSharedBg: '#2c2113',
+  chipSharedBorder: '#5a4527',
+  chipSharedText: '#e7c690',
+  // Muted chip — used for tags not shared with the current user.
+  chipMutedBg: '#1f1810',
+  chipMutedBorder: '#36291d',
+  chipMutedText: '#9a8870',
 
   overlay: 'rgba(0,0,0,0.45)',
   white: '#ffffff',

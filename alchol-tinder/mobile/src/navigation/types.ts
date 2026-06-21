@@ -12,6 +12,6 @@ export type AppStackParamList = {
   Matches: undefined;
   BlockedUsers: undefined;
   Match: { match: Match };
-  Chat: { match: Match };
+  Chat: { matchId: string };
   VirtualCheers: { matchId: string; roomName: string };
 };

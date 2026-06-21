@@ -22,6 +22,8 @@ export interface UserProfile {
   verification_status: 'unverified' | 'pending' | 'verified';
   rating: number;
   is_available: boolean;
+  is_online: boolean;
+  avatar_url: string | null;
   tags: Tag[];
 }
 

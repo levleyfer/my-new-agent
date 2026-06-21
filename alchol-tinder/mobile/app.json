@@ -22,9 +22,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "apiBaseUrl": "https://8zvv9gzs-8000.euw.devtunnels.ms"
-    },
     "plugins": [
       "expo-secure-store",
       [

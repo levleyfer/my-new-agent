@@ -106,6 +106,19 @@ async def list_my_matches(
     return [await _to_match_read(db, m, current_user.id) for m in matches]
 
 
+@router.get("/{match_id}", response_model=MatchRead)
+async def get_match(
+    match_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MatchRead:
+    match = await db.scalar(select(Match).where(Match.id == match_id))
+    if not match:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Match not found")
+    _require_participant(match, current_user.id)
+    return await _to_match_read(db, match, current_user.id)
+
+
 @router.post("/{match_id}/video", response_model=VideoSessionRead)
 async def start_virtual_cheers(
     match_id: uuid.UUID,
@@ -253,6 +266,7 @@ async def send_message(
         {
             "type": "new_message",
             "match_id": str(match.id),
+            "sender_name": current_user.display_name,
             "message": {
                 "id": str(message.id),
                 "match_id": str(match.id),

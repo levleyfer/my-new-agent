@@ -1,9 +1,10 @@
 import uuid
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
 
 from src.core.config import get_settings
+from src.core.connections import manager
 from src.core.safety import is_of_age
 
 _MIN_AGE = get_settings().MIN_AGE
@@ -40,7 +41,18 @@ class UserRead(BaseModel):
     verification_status: str
     rating: float
     is_available: bool
+    avatar_url: str | None = None
     tags: list[TagRead] = []
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def is_online(self) -> bool:
+        """Real connection presence (has an open /ws/calls socket right now)
+        — distinct from is_available, which is a manual 'looking for company
+        tonight' toggle. Computed at serialization time so it works whether
+        this model was built from an ORM object or constructed by hand.
+        """
+        return manager.is_connected(self.id)
 
 
 class UserMeRead(UserRead):

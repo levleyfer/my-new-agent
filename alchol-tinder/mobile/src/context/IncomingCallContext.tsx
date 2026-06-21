@@ -14,6 +14,7 @@ interface IncomingCall {
 interface NewMessageEvent {
   matchId: string;
   message: ChatMessage;
+  senderName: string;
 }
 
 interface IncomingCallState {
@@ -72,7 +73,7 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
           } else if (data.type === 'call_declined') {
             setDeclinedMatchId(data.match_id);
           } else if (data.type === 'new_message') {
-            setLastMessage({ matchId: data.match_id, message: data.message });
+            setLastMessage({ matchId: data.match_id, message: data.message, senderName: data.sender_name });
           }
         } catch {
           // ignore malformed messages

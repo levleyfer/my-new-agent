@@ -2,8 +2,10 @@ import { DarkTheme, NavigationContainer, Theme } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import IncomingCallModal from './src/components/IncomingCallModal';
+import NewMessageToast from './src/components/NewMessageToast';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { IncomingCallProvider } from './src/context/IncomingCallContext';
 import { navigationRef } from './src/navigation/navigationRef';
@@ -71,11 +73,7 @@ function AppNavigator() {
         options={{ title: 'Blocked users' }}
       />
       <AppStack.Screen name="Match" component={MatchScreen} options={{ title: 'Match' }} />
-      <AppStack.Screen
-        name="Chat"
-        component={ChatScreen}
-        options={({ route }) => ({ title: route.params.match.other_user.display_name })}
-      />
+      <AppStack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
       <AppStack.Screen
         name="VirtualCheers"
         component={VirtualCheersScreen}
@@ -101,14 +99,17 @@ function RootNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <IncomingCallProvider>
-        <NavigationContainer ref={navigationRef} theme={navigationTheme}>
-          <StatusBar style="light" />
-          <RootNavigator />
-        </NavigationContainer>
-        <IncomingCallModal />
-      </IncomingCallProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <IncomingCallProvider>
+          <NavigationContainer ref={navigationRef} theme={navigationTheme}>
+            <StatusBar style="light" />
+            <RootNavigator />
+          </NavigationContainer>
+          <IncomingCallModal />
+          <NewMessageToast />
+        </IncomingCallProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
