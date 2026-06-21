@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 
 import { WS_BASE_URL } from '../api/config';
 import { ChatMessage } from '../api/types';
-import { navigationRef } from '../navigation/navigationRef';
+import { isViewingChat, navigationRef } from '../navigation/navigationRef';
 import { useAuth } from './AuthContext';
 
 interface IncomingCall {
@@ -21,9 +21,12 @@ interface IncomingCallState {
   incomingCall: IncomingCall | null;
   declinedMatchId: string | null;
   lastMessage: NewMessageEvent | null;
+  /** Unread message count per match ID, for chats the user hasn't opened since the message arrived — drives the Matches tab badge and per-avatar count badges. */
+  unreadCounts: ReadonlyMap<string, number>;
   accept: () => void;
   decline: () => void;
   acknowledgeDecline: () => void;
+  markMatchRead: (matchId: string) => void;
 }
 
 const IncomingCallContext = createContext<IncomingCallState | undefined>(undefined);
@@ -45,6 +48,7 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [declinedMatchId, setDeclinedMatchId] = useState<string | null>(null);
   const [lastMessage, setLastMessage] = useState<NewMessageEvent | null>(null);
+  const [unreadCounts, setUnreadCounts] = useState<ReadonlyMap<string, number>>(new Map());
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -73,7 +77,15 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
           } else if (data.type === 'call_declined') {
             setDeclinedMatchId(data.match_id);
           } else if (data.type === 'new_message') {
-            setLastMessage({ matchId: data.match_id, message: data.message, senderName: data.sender_name });
+            const matchId = data.match_id;
+            setLastMessage({ matchId, message: data.message, senderName: data.sender_name });
+            if (!isViewingChat(matchId)) {
+              setUnreadCounts((prev) => {
+                const next = new Map(prev);
+                next.set(matchId, (next.get(matchId) ?? 0) + 1);
+                return next;
+              });
+            }
           }
         } catch {
           // ignore malformed messages
@@ -100,6 +112,15 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
       incomingCall,
       declinedMatchId,
       lastMessage,
+      unreadCounts,
+      markMatchRead: (matchId: string) => {
+        setUnreadCounts((prev) => {
+          if (!prev.has(matchId)) return prev;
+          const next = new Map(prev);
+          next.delete(matchId);
+          return next;
+        });
+      },
       accept: () => {
         if (!incomingCall) return;
         const { matchId, roomName } = incomingCall;
@@ -116,7 +137,7 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
       },
       acknowledgeDecline: () => setDeclinedMatchId(null),
     }),
-    [incomingCall, declinedMatchId, lastMessage],
+    [incomingCall, declinedMatchId, lastMessage, unreadCounts],
   );
 
   return <IncomingCallContext.Provider value={value}>{children}</IncomingCallContext.Provider>;

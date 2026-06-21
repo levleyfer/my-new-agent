@@ -15,6 +15,8 @@ const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }
 interface Props {
   active: TabKey;
   onChange: (tab: TabKey) => void;
+  /** Shows a small dot on the Matches tab — there's an unread message waiting. */
+  showMatchesBadge?: boolean;
 }
 
 /**
@@ -28,7 +30,7 @@ interface Props {
  * bottom-tab navigator later is a drop-in change since the visual contract
  * (active tab + gold highlight) stays the same.
  */
-export default function BottomTabBar({ active, onChange }: Props) {
+export default function BottomTabBar({ active, onChange, showMatchesBadge }: Props) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -37,7 +39,10 @@ export default function BottomTabBar({ active, onChange }: Props) {
         const isActive = tab.key === active;
         return (
           <Pressable key={tab.key} style={styles.tab} onPress={() => onChange(tab.key)}>
-            <Ionicons name={isActive ? tab.icon : `${tab.icon}-outline` as keyof typeof Ionicons.glyphMap} size={22} color={isActive ? colors.primary : colors.textMuted} />
+            <View>
+              <Ionicons name={isActive ? tab.icon : `${tab.icon}-outline` as keyof typeof Ionicons.glyphMap} size={22} color={isActive ? colors.primary : colors.textMuted} />
+              {tab.key === 'matches' && showMatchesBadge && <View style={styles.badge} />}
+            </View>
             <Text style={[styles.label, isActive && styles.labelActive]}>{tab.label}</Text>
           </Pressable>
         );
@@ -57,4 +62,13 @@ const styles = StyleSheet.create({
   tab: { flex: 1, alignItems: 'center', gap: 2 },
   label: { fontSize: 11.5, fontWeight: '600', color: colors.textMuted },
   labelActive: { color: colors.primary },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.danger,
+  },
 });

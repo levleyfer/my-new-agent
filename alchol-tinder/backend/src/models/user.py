@@ -34,6 +34,12 @@ class User(Base):
     rating: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     is_available: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
+    # Default OFF: a locked phone showing a stranger's message content on the
+    # lock screen is a privacy leak the user didn't opt into (see CLAUDE.md —
+    # privacy by default). When off, push notifications say only "New
+    # message" with no sender name or body.
+    notify_message_preview: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     # Relative path under /media (e.g. "/media/avatars/<uuid>.jpg") — never an
     # absolute host, since the frontend's API base URL changes between dev
     # setups (localhost vs. a tunnel); the client prefixes it at render time.

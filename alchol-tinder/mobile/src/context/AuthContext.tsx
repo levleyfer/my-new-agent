@@ -1,7 +1,9 @@
+import * as Notifications from 'expo-notifications';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-import { getMyProfile, login as apiLogin, registerUser } from '../api/client';
+import { getMyProfile, login as apiLogin, registerPushToken, registerUser } from '../api/client';
 import { MyProfile, RegisterPayload } from '../api/types';
+import { registerForPushNotificationsAsync, unregisterCurrentPushTokenAsync } from '../notifications/setup';
 import { deleteItem, getItem, setItem } from '../utils/storage';
 
 const TOKEN_KEY = 'auth_token';
@@ -31,6 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const me = await getMyProfile(stored);
           setToken(stored);
           setProfile(me);
+          // App was relaunched with an existing session (cold start) — still
+          // need a push token registered for this device/login, same as a
+          // fresh login. Fire-and-forget: never blocks reaching the app.
+          registerForPushNotificationsAsync(stored);
         }
       } catch {
         // Stored token missing/invalid/expired, or storage unavailable — fall
@@ -42,11 +48,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
+  // Expo can reissue a push token (reinstall, OS-level rotation) while the
+  // app is already signed in — re-register it with the backend whenever
+  // that happens so old chats keep reaching this device. Re-subscribing
+  // whenever `token` (the *auth* token, not the push token) changes ensures
+  // the listener always closes over the latest signed-in user.
+  useEffect(() => {
+    if (!token) return;
+    const subscription = Notifications.addPushTokenListener(({ data: pushToken }) => {
+      registerPushToken(token, pushToken).catch(() => {
+        // Best-effort — see registerForPushNotificationsAsync for rationale.
+      });
+    });
+    return () => subscription.remove();
+  }, [token]);
+
   const applyToken = async (newToken: string) => {
     const me = await getMyProfile(newToken);
     await setItem(TOKEN_KEY, newToken);
     setToken(newToken);
     setProfile(me);
+    await registerForPushNotificationsAsync(newToken);
   };
 
   const value = useMemo<AuthState>(
@@ -64,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await applyToken(newToken);
       },
       logout: async () => {
+        if (token) await unregisterCurrentPushTokenAsync(token);
         await deleteItem(TOKEN_KEY);
         setToken(null);
         setProfile(null);

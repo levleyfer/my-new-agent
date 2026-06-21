@@ -15,6 +15,7 @@ from src.models.rating import Rating
 from src.models.user import User
 from src.schemas.match import MatchCreateRequest, MatchRead, RatingCreateRequest, VideoSessionRead
 from src.schemas.message import MessageCreateRequest, MessageRead
+from src.services.push import send_new_message_push
 from src.services.safety import get_blocked_user_ids
 
 router = APIRouter(prefix="/matches", tags=["matches"])
@@ -276,4 +277,23 @@ async def send_message(
             },
         },
     )
+
+    # Always also send a push (best-effort, not gated on websocket connectivity):
+    # the websocket only tells us the app process is running *somewhere*, not
+    # whether the recipient is looking at this exact chat right now — that
+    # finer-grained check (isViewingChat) only exists on the client, via
+    # navigationRef. The client's own foreground notification handler
+    # suppresses the visible alert when this chat is already open, so sending
+    # unconditionally here is safe and keeps that single check in one place
+    # rather than duplicating it server-side.
+    recipient = await db.get(User, other_id)
+    if recipient is not None:
+        await send_new_message_push(
+            db,
+            recipient_id=other_id,
+            match_id=match.id,
+            sender_name=current_user.display_name,
+            message_body=message.body,
+            show_preview=recipient.notify_message_preview,
+        )
     return message

@@ -2,9 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { deleteAvatar, uploadAvatar, verifyMyAge } from '../api/client';
+import { deleteAvatar, updateMyNotificationPreferences, uploadAvatar } from '../api/client';
 import { ApiError } from '../api/types';
 import Avatar from '../components/Avatar';
 import PrimaryButton from '../components/PrimaryButton';
@@ -17,8 +17,8 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Profile'>;
 
 export default function ProfileScreen({ navigation }: Props) {
   const { profile, token, refreshProfile, logout } = useAuth();
-  const [verifying, setVerifying] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [updatingPreview, setUpdatingPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!profile) {
@@ -28,20 +28,6 @@ export default function ProfileScreen({ navigation }: Props) {
       </ScreenContainer>
     );
   }
-
-  const handleVerify = async () => {
-    if (!token) return;
-    setError(null);
-    setVerifying(true);
-    try {
-      await verifyMyAge(token);
-      await refreshProfile();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Verification failed.');
-    } finally {
-      setVerifying(false);
-    }
-  };
 
   const handleChangeAvatar = async () => {
     if (!token) return;
@@ -83,6 +69,20 @@ export default function ProfileScreen({ navigation }: Props) {
       setError(err instanceof ApiError ? err.message : 'Could not remove your photo.');
     } finally {
       setUploadingAvatar(false);
+    }
+  };
+
+  const handleTogglePreview = async (value: boolean) => {
+    if (!token) return;
+    setError(null);
+    setUpdatingPreview(true);
+    try {
+      await updateMyNotificationPreferences(token, value);
+      await refreshProfile();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not update notification settings.');
+    } finally {
+      setUpdatingPreview(false);
     }
   };
 
@@ -148,15 +148,25 @@ export default function ProfileScreen({ navigation }: Props) {
         </View>
       )}
 
-      {!profile.is_age_verified && (
-        <View style={styles.verifyBox}>
-          <Text style={styles.verifyText}>
-            Age verification is required before you can discover or be discovered. This dev build
-            uses a placeholder — production would use a real ID-check provider.
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Notifications</Text>
+      </View>
+      <View style={styles.previewRow}>
+        <View style={styles.previewTextWrap}>
+          <Text style={styles.previewLabel}>Show message preview in notifications</Text>
+          <Text style={styles.previewHint}>
+            Off by default. When off, notifications just say &quot;New message&quot; — no sender
+            name or text shown on your lock screen.
           </Text>
-          <PrimaryButton title="Verify age (dev)" onPress={handleVerify} loading={verifying} />
         </View>
-      )}
+        <Switch
+          value={profile.notify_message_preview}
+          onValueChange={handleTogglePreview}
+          disabled={updatingPreview}
+          trackColor={{ false: colors.surfaceRaised, true: colors.primaryMuted }}
+          thumbColor={profile.notify_message_preview ? colors.primary : colors.textMuted}
+        />
+      </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
 
@@ -223,16 +233,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   tagText: { fontSize: 13, color: colors.textSecondary },
-  error: { color: colors.danger, marginTop: spacing.md },
-  verifyBox: {
-    marginTop: spacing.xl,
-    padding: spacing.lg,
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radii.md,
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.accentMuted,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
   },
-  verifyText: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.md },
+  previewTextWrap: { flex: 1 },
+  previewLabel: { color: colors.textPrimary, fontSize: 14, fontWeight: '600' },
+  previewHint: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  error: { color: colors.danger, marginTop: spacing.md },
   blockedLink: {
     flexDirection: 'row',
     alignItems: 'center',

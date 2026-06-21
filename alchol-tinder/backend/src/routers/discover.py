@@ -76,6 +76,7 @@ async def discover(
             verification_status=candidates_by_id[r.id].verification_status,
             rating=candidates_by_id[r.id].rating,
             is_available=candidates_by_id[r.id].is_available,
+            avatar_url=candidates_by_id[r.id].avatar_url,
             tags=candidates_by_id[r.id].tags,
             distance_km=r.distance_km,
             shared_tag_count=r.shared_tag_count,

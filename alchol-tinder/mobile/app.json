@@ -29,7 +29,8 @@
         {
           "locationWhenInUsePermission": "We use your approximate location to find nearby matches. Your exact coordinates are never shared with other users."
         }
-      ]
+      ],
+      "expo-notifications"
     ]
   }
 }

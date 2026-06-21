@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
+import { useIncomingCall } from '../context/IncomingCallContext';
 import { AppStackParamList } from '../navigation/types';
 import { colors, radii, spacing } from '../theme/theme';
 
@@ -17,10 +19,21 @@ import { colors, radii, spacing } from '../theme/theme';
 type Props = NativeStackScreenProps<AppStackParamList, 'VirtualCheers'>;
 
 export default function VirtualCheersScreen({ route, navigation }: Props) {
-  const { roomName } = route.params;
+  const { matchId, roomName } = route.params;
+  const { declinedMatchId, acknowledgeDecline } = useIncomingCall();
+  const [declined, setDeclined] = useState(false);
+
+  useEffect(() => {
+    if (declinedMatchId !== matchId) return;
+    setDeclined(true);
+    acknowledgeDecline();
+    const timer = setTimeout(() => navigation.popToTop(), 2000);
+    return () => clearTimeout(timer);
+  }, [declinedMatchId, matchId, acknowledgeDecline, navigation]);
 
   return (
     <ScreenContainer style={styles.container}>
+      {declined && <Text style={styles.declinedBanner}>They declined the call.</Text>}
       <View style={styles.videoPlaceholder}>
         <Ionicons name="videocam-outline" size={40} color={colors.textMuted} />
         <Text style={styles.placeholderText}>Video call placeholder</Text>
@@ -37,6 +50,12 @@ export default function VirtualCheersScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { padding: spacing.xl, justifyContent: 'center' },
+  declinedBanner: {
+    color: colors.danger,
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
   videoPlaceholder: {
     height: 320,
     backgroundColor: colors.surface,

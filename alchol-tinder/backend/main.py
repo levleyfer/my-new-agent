@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from src.core.media import MEDIA_ROOT
-from src.routers import auth, calls, discover, matches, safety, tags, users
+from src.routers import auth, calls, discover, matches, push_tokens, safety, tags, users
 
 app = FastAPI(title="Social Drinking App API")
 app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
@@ -26,6 +26,7 @@ app.include_router(tags.router)
 app.include_router(discover.router)
 app.include_router(matches.router)
 app.include_router(calls.router)
+app.include_router(push_tokens.router)
 
 
 @app.get("/health", tags=["meta"])

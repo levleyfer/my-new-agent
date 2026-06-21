@@ -1,19 +1,20 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { blockUser, createMatch, discover, reportUser, updateMyAvailability, updateMyLocation } from '../api/client';
 import { ApiError, DiscoverCandidate, ReportReason, Tag } from '../api/types';
-import AvailabilityToggle from '../components/AvailabilityToggle';
 import BottomTabBar, { TabKey } from '../components/BottomTabBar';
 import PersonCard from '../components/PersonCard';
+import { Text, Toggle } from '../components/primitives';
 import ScreenContainer from '../components/ScreenContainer';
 import SafetyMenu from '../components/SafetyMenu';
 import { useAuth } from '../context/AuthContext';
+import { useIncomingCall } from '../context/IncomingCallContext';
 import { AppStackParamList } from '../navigation/types';
-import { colors, spacing, typography } from '../theme/theme';
+import { colors, spacing } from '../theme/tokens';
 import { discoverMockCandidates } from './discoverMockData';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Discover'>;
@@ -42,10 +43,11 @@ function splitTags(tags: Tag[], sharedTagCount: number) {
   return { sharedTags, otherTags, prefersPublicPlace, virtualCheersFirst };
 }
 
-const USE_MOCK_DATA = true; // TODO: flip to false once the redesigned screen is wired back to live discover() data.
+const USE_MOCK_DATA = false;
 
 export default function DiscoverScreen({ navigation }: Props) {
   const { token, profile, refreshProfile } = useAuth();
+  const { unreadCounts } = useIncomingCall();
   const [candidates, setCandidates] = useState<DiscoverCandidate[]>(USE_MOCK_DATA ? discoverMockCandidates : []);
   const [loading, setLoading] = useState(!USE_MOCK_DATA);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,15 +65,28 @@ export default function DiscoverScreen({ navigation }: Props) {
       return false;
     }
 
+    const servicesEnabled = await Location.hasServicesEnabledAsync();
+    if (!servicesEnabled) {
+      setError('Location services are turned off on this device. Turn them on in Settings and try again.');
+      return false;
+    }
+
+    // A cached last-known fix is near-instant and good enough for proximity
+    // matching — try it first so we're not stuck waiting on a cold GPS fix
+    // (which can take well over 8s indoors on a real device) every time.
+    const cached = await Location.getLastKnownPositionAsync();
+
     // getCurrentPositionAsync has no built-in timeout on some platforms (web
     // geolocation in particular can hang a long time before failing) — race
     // it against our own deadline so the UI never gets stuck spinning.
-    const position = await Promise.race([
-      Location.getCurrentPositionAsync({}),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('location_timeout')), 8000),
-      ),
-    ]);
+    const position =
+      cached ??
+      (await Promise.race([
+        Location.getCurrentPositionAsync({}),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('location_timeout')), 20000),
+        ),
+      ]));
     await updateMyLocation(token, position.coords.latitude, position.coords.longitude);
     return true;
   }, [token]);
@@ -92,7 +107,8 @@ export default function DiscoverScreen({ navigation }: Props) {
       } else if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError('Could not load nearby people.');
+        const detail = err instanceof Error ? err.message : String(err);
+        setError(`Could not load nearby people. (${detail})`);
       }
     }
   }, [token, ensureLocationShared]);
@@ -158,33 +174,42 @@ export default function DiscoverScreen({ navigation }: Props) {
   return (
     <ScreenContainer>
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <Text style={typography.title}>Nearby tonight</Text>
-        <AvailabilityToggle isAvailable={isAvailable} onToggle={handleToggleAvailability} />
+        <Text variant="title">Nearby tonight</Text>
+        <Toggle
+          value={isAvailable}
+          onValueChange={handleToggleAvailability}
+          label="Available"
+          showStatusDot
+        />
       </View>
 
       {error && (
         <View style={styles.errorRow}>
-          <Text style={styles.error}>{error}</Text>
-          <Pressable onPress={() => loadCandidates()}>
-            <Text style={styles.retryText}>Retry</Text>
+          <Text variant="meta" color={colors.state.danger} style={styles.errorFlex}>
+            {error}
+          </Text>
+          <Pressable onPress={() => loadCandidates()} hitSlop={8}>
+            <Text variant="tag" color={colors.gold.default}>
+              Retry
+            </Text>
           </Pressable>
         </View>
       )}
 
       {loading ? (
-        <ActivityIndicator color={colors.primary} style={styles.center} />
+        <ActivityIndicator color={colors.gold.default} style={styles.center} />
       ) : (
         <FlatList
           data={candidates}
           keyExtractor={(item) => item.id}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.gold.default} />
           }
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>🌙</Text>
-              <Text style={styles.emptyText}>No one nearby right now — check back later.</Text>
+              <Text variant="meta">No one nearby right now — check back later.</Text>
             </View>
           }
           renderItem={({ item }) => {
@@ -213,7 +238,7 @@ export default function DiscoverScreen({ navigation }: Props) {
         />
       )}
 
-      <BottomTabBar active="nearby" onChange={handleTabChange} />
+      <BottomTabBar active="nearby" onChange={handleTabChange} showMatchesBadge={unreadCounts.size > 0} />
 
       {safetyTarget && (
         <SafetyMenu
@@ -246,10 +271,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     gap: spacing.sm,
   },
-  error: { color: colors.danger, flex: 1 },
-  retryText: { color: colors.primary, fontWeight: '600' },
+  errorFlex: { flex: 1 },
   list: { padding: spacing.xl, paddingTop: 0, flexGrow: 1 },
-  empty: { alignItems: 'center', marginTop: 60 },
+  empty: { alignItems: 'center', marginTop: spacing.xxl * 2 },
   emptyEmoji: { fontSize: 32, marginBottom: spacing.sm },
-  emptyText: { color: colors.textMuted, fontSize: 14 },
 });

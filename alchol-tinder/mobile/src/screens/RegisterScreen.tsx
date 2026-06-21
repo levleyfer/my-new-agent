@@ -2,6 +2,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
+import DateOfBirthPicker from '../components/DateOfBirthPicker';
+import PasswordField from '../components/PasswordField';
 import PrimaryButton from '../components/PrimaryButton';
 import TextField from '../components/TextField';
 import { ApiError } from '../api/types';
@@ -70,9 +72,9 @@ export default function RegisterScreen({ navigation }: Props) {
           value={email}
           onChangeText={setEmail}
         />
-        <TextField placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
+        <PasswordField placeholder="Password" value={password} onChangeText={setPassword} />
         <TextField placeholder="Display name" value={displayName} onChangeText={setDisplayName} />
-        <TextField placeholder="Birth date (YYYY-MM-DD)" value={birthDate} onChangeText={setBirthDate} />
+        <DateOfBirthPicker value={birthDate} onChange={setBirthDate} />
 
         {error && <Text style={styles.error}>{error}</Text>}
 

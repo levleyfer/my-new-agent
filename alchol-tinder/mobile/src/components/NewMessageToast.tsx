@@ -1,12 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useIncomingCall } from '../context/IncomingCallContext';
-import { navigationRef } from '../navigation/navigationRef';
+import { isViewingChat, navigationRef } from '../navigation/navigationRef';
 import { colors, radii, spacing } from '../theme/theme';
-
-const AUTO_DISMISS_MS = 4000;
 
 interface ToastContent {
   matchId: string;
@@ -14,41 +12,32 @@ interface ToastContent {
   body: string;
 }
 
-function isAlreadyViewingChat(matchId: string): boolean {
-  if (!navigationRef.isReady()) return false;
-  const route = navigationRef.getCurrentRoute();
-  return route?.name === 'Chat' && (route.params as { matchId?: string } | undefined)?.matchId === matchId;
-}
-
 /** A Messenger-style "new message" banner — non-blocking (unlike the
  * incoming-call modal, chat isn't urgent enough to interrupt whatever the
  * user is doing), tappable to jump straight into the conversation, and
  * suppressed when that chat is already open on screen.
+ *
+ * Stays on screen until the user taps it or dismisses it — it doesn't
+ * auto-disappear, since a message you didn't notice in time shouldn't just
+ * vanish with no other trace (the Matches tab badge is the other half of
+ * that: it persists even after this toast is dismissed).
  */
 export default function NewMessageToast() {
   const { lastMessage } = useIncomingCall();
   const [content, setContent] = useState<ToastContent | null>(null);
-  const dismissTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    if (!lastMessage || isAlreadyViewingChat(lastMessage.matchId)) return;
-
+    if (!lastMessage || isViewingChat(lastMessage.matchId)) return;
     setContent({
       matchId: lastMessage.matchId,
       senderName: lastMessage.senderName,
       body: lastMessage.message.body,
     });
-
-    clearTimeout(dismissTimer.current);
-    dismissTimer.current = setTimeout(() => setContent(null), AUTO_DISMISS_MS);
-
-    return () => clearTimeout(dismissTimer.current);
   }, [lastMessage]);
 
   if (!content) return null;
 
   const handlePress = () => {
-    clearTimeout(dismissTimer.current);
     setContent(null);
     if (navigationRef.isReady()) {
       navigationRef.navigate('Chat', { matchId: content.matchId });
@@ -67,6 +56,9 @@ export default function NewMessageToast() {
             {content.body}
           </Text>
         </View>
+        <Pressable onPress={() => setContent(null)} hitSlop={8} style={styles.closeButton}>
+          <Ionicons name="close" size={16} color={colors.textMuted} />
+        </Pressable>
       </Pressable>
     </View>
   );
@@ -109,4 +101,5 @@ const styles = StyleSheet.create({
   textWrap: { flex: 1 },
   sender: { color: colors.textPrimary, fontSize: 14, fontWeight: '700' },
   body: { color: colors.textSecondary, fontSize: 13, marginTop: 1 },
+  closeButton: { padding: spacing.xs },
 });

@@ -9,6 +9,7 @@ import Avatar from '../components/Avatar';
 import OnlineBadge from '../components/OnlineBadge';
 import ScreenContainer from '../components/ScreenContainer';
 import { useAuth } from '../context/AuthContext';
+import { useIncomingCall } from '../context/IncomingCallContext';
 import { AppStackParamList } from '../navigation/types';
 import { colors, radii, spacing } from '../theme/theme';
 
@@ -30,6 +31,7 @@ const STATUS_COLORS: Record<MatchStatus, string> = {
 
 export default function MatchesScreen({ navigation }: Props) {
   const { token } = useAuth();
+  const { unreadCounts } = useIncomingCall();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -83,7 +85,12 @@ export default function MatchesScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('Match', { match: item })}
             >
               <View style={styles.cardHeader}>
-                <Avatar avatarUrl={item.other_user.avatar_url} displayName={item.other_user.display_name} size={36} />
+                <Avatar
+                  avatarUrl={item.other_user.avatar_url}
+                  displayName={item.other_user.display_name}
+                  size={36}
+                  unreadCount={unreadCounts.get(item.id)}
+                />
                 <Text style={styles.cardName}>{item.other_user.display_name}</Text>
                 {item.other_user.verification_status === 'verified' && (
                   <Ionicons name="checkmark-circle" size={16} color={colors.success} />

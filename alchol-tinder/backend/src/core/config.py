@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me"
     JWT_SECRET: str = "change-me"
     VERIFICATION_API_KEY: str = ""
+    DAILY_API_KEY: str = ""
     MIN_AGE: int = 18  # IL legal drinking age
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days

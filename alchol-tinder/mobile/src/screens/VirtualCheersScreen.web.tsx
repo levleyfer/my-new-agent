@@ -95,6 +95,11 @@ export default function VirtualCheersScreen({ route, navigation }: Props) {
         setStatus('ready');
         api.addEventListener('videoConferenceLeft', () => navigation.popToTop());
         api.addEventListener('readyToClose', () => navigation.popToTop());
+        // This is a 1-on-1 room — if the other person leaves, the call is
+        // over for us too. Without this, hanging up on one side leaves the
+        // other person stuck looking at an empty room until they notice and
+        // hang up manually themselves.
+        api.addEventListener('participantLeft', () => navigation.popToTop());
       })
       .catch(() => {
         if (!cancelled) {
@@ -111,11 +116,18 @@ export default function VirtualCheersScreen({ route, navigation }: Props) {
   }, [roomName, profile?.display_name, navigation]);
 
   useEffect(() => {
-    if (declinedMatchId === matchId) {
-      setDeclined(true);
-      acknowledgeDecline();
-    }
-  }, [declinedMatchId, matchId, acknowledgeDecline]);
+    if (declinedMatchId !== matchId) return;
+    setDeclined(true);
+    acknowledgeDecline();
+    // The callee never joined the room, so there's no Jitsi participant
+    // event to catch this the way an in-progress hangup is handled — show
+    // the banner briefly, then leave on the caller's behalf so they're not
+    // left sitting alone in an empty room indefinitely.
+    apiRef.current?.dispose();
+    apiRef.current = null;
+    const timer = setTimeout(() => navigation.popToTop(), 2000);
+    return () => clearTimeout(timer);
+  }, [declinedMatchId, matchId, acknowledgeDecline, navigation]);
 
   return (
     <ScreenContainer style={styles.container}>

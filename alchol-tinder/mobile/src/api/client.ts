@@ -85,8 +85,23 @@ export function updateMyAvailability(token: string, isAvailable: boolean): Promi
   return request('/users/me/availability', { method: 'PATCH', token, body: { is_available: isAvailable } });
 }
 
-export function verifyMyAge(token: string): Promise<MyProfile> {
-  return request('/users/me/verify', { method: 'POST', token });
+export function updateMyNotificationPreferences(
+  token: string,
+  notifyMessagePreview: boolean,
+): Promise<MyProfile> {
+  return request('/users/me/notification-preferences', {
+    method: 'PATCH',
+    token,
+    body: { notify_message_preview: notifyMessagePreview },
+  });
+}
+
+export function registerPushToken(token: string, pushToken: string): Promise<void> {
+  return request('/push-tokens', { method: 'POST', token, body: { token: pushToken } });
+}
+
+export function unregisterPushToken(token: string, pushToken: string): Promise<void> {
+  return request(`/push-tokens/${encodeURIComponent(pushToken)}`, { method: 'DELETE', token });
 }
 
 export async function uploadAvatar(token: string, fileUri: string, mimeType: string): Promise<MyProfile> {

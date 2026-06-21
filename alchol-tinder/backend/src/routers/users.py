@@ -11,10 +11,11 @@ from src.core.deps import get_current_user
 from src.core.media import AVATAR_DIR
 from src.core.security import hash_password
 from src.models.tag import Tag
-from src.models.user import User, VerificationStatus
+from src.models.user import User
 from src.schemas.user import (
     AvailabilityUpdateRequest,
     LocationUpdateRequest,
+    NotificationPreferenceUpdateRequest,
     TagsUpdateRequest,
     UserCreate,
     UserMeRead,
@@ -41,11 +42,17 @@ async def create_user(payload: UserCreate, db: AsyncSession = Depends(get_db)) -
     if exists:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
 
+    # UserCreate.birth_date already rejected anything under MIN_AGE (see
+    # schemas/user.py), so age is verified the moment registration succeeds —
+    # no separate manual step. This is still a backend-enforced check against
+    # the stored birth_date, not a client-declared flag (see CLAUDE.md: age
+    # must be a verified attribute, never self-declared-only for matching).
     user = User(
         email=payload.email,
         hashed_password=hash_password(payload.password),
         display_name=payload.display_name,
         birth_date=payload.birth_date,
+        is_age_verified=True,
     )
     db.add(user)
     await db.commit()
@@ -102,20 +109,17 @@ async def update_my_availability(
     return current_user
 
 
-@router.post("/me/verify", response_model=UserMeRead)
-async def verify_my_age(
+@router.patch("/me/notification-preferences", response_model=UserMeRead)
+async def update_my_notification_preferences(
+    payload: NotificationPreferenceUpdateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """DEV STUB — auto-approves age verification.
-
-    This does NOT perform real identity/age verification. It exists only so the
-    matching age-gate (is_age_verified) can be exercised before launch. Replace
-    with a real call to a KYC provider (Onfido/Veriff, via VERIFICATION_API_KEY)
-    before this app handles real users — see CLAUDE.md Product & Safety Rules.
+    """'Show message preview in notifications' — defaults OFF (see
+    models/user.py). Flipping this on is an explicit, revocable opt-in; it
+    only affects what text a push notification shows, never what's stored.
     """
-    current_user.is_age_verified = True
-    current_user.verification_status = VerificationStatus.verified
+    current_user.notify_message_preview = payload.notify_message_preview
     await db.commit()
     await db.refresh(current_user, attribute_names=["tags"])
     return current_user

@@ -2,6 +2,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
+import PasswordField from '../components/PasswordField';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 import TextField from '../components/TextField';
@@ -49,7 +50,7 @@ export default function LoginScreen({ navigation }: Props) {
           value={email}
           onChangeText={setEmail}
         />
-        <TextField placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
+        <PasswordField placeholder="Password" value={password} onChangeText={setPassword} />
 
         {error && <Text style={styles.error}>{error}</Text>}
 

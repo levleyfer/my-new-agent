@@ -60,6 +60,7 @@ class UserMeRead(UserRead):
 
     email: EmailStr
     is_age_verified: bool
+    notify_message_preview: bool
 
 
 class TagsUpdateRequest(BaseModel):
@@ -73,3 +74,12 @@ class LocationUpdateRequest(BaseModel):
 
 class AvailabilityUpdateRequest(BaseModel):
     is_available: bool
+
+
+class NotificationPreferenceUpdateRequest(BaseModel):
+    """'Show message preview in notifications' toggle — see CLAUDE.md privacy
+    rules. Defaults to False on the User model; this only ever flips it at
+    the user's explicit request.
+    """
+
+    notify_message_preview: bool

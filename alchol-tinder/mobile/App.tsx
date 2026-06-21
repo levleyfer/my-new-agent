@@ -4,8 +4,10 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import BadgeSync from './src/components/BadgeSync';
 import IncomingCallModal from './src/components/IncomingCallModal';
 import NewMessageToast from './src/components/NewMessageToast';
+import NotificationResponseHandler from './src/components/NotificationResponseHandler';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { IncomingCallProvider } from './src/context/IncomingCallContext';
 import { navigationRef } from './src/navigation/navigationRef';
@@ -108,6 +110,8 @@ export default function App() {
           </NavigationContainer>
           <IncomingCallModal />
           <NewMessageToast />
+          <NotificationResponseHandler />
+          <BadgeSync />
         </IncomingCallProvider>
       </AuthProvider>
     </SafeAreaProvider>

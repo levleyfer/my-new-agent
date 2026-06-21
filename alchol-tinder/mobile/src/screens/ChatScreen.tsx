@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -28,7 +29,8 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 export default function ChatScreen({ route, navigation }: Props) {
   const { matchId } = route.params;
   const { token, profile } = useAuth();
-  const { lastMessage } = useIncomingCall();
+  const { lastMessage, markMatchRead } = useIncomingCall();
+  const headerHeight = useHeaderHeight();
   const [match, setMatch] = useState<Match | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +56,10 @@ export default function ChatScreen({ route, navigation }: Props) {
   useEffect(() => {
     load().finally(() => setLoading(false));
   }, [load]);
+
+  useEffect(() => {
+    markMatchRead(matchId);
+  }, [matchId, markMatchRead]);
 
   useEffect(() => {
     if (match) navigation.setOptions({ title: match.other_user.display_name });
@@ -87,6 +93,7 @@ export default function ChatScreen({ route, navigation }: Props) {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         {match && (
           <View style={styles.statusRow}>

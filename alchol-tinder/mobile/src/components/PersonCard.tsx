@@ -1,11 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { colors, radii, spacing, typography } from '../theme/theme';
+import { colors, radii, spacing } from '../theme/tokens';
 import { formatDistance } from '../utils/format';
-import Avatar from './Avatar';
-import ChipList from './ChipList';
-import OnlineBadge from './OnlineBadge';
+import { Avatar, Button, Tag, Text } from './primitives';
 
 export interface PersonCardProps {
   name: string;
@@ -29,6 +27,19 @@ export interface PersonCardProps {
   isConnecting?: boolean;
 }
 
+const MAX_VISIBLE_TAGS = 5;
+
+/** Builds the ordered, capped list of tag pills: shared first (gold), then others (muted), then a "+N more" overflow. */
+function buildTagRow(sharedTags: string[], otherTags: string[]) {
+  const ordered = [
+    ...sharedTags.map((label) => ({ label, variant: 'shared' as const })),
+    ...otherTags.map((label) => ({ label, variant: 'muted' as const })),
+  ];
+  const visible = ordered.slice(0, MAX_VISIBLE_TAGS);
+  const remaining = ordered.length - visible.length;
+  return { visible, remaining };
+}
+
 /**
  * A single person's card in the "Nearby tonight" feed. Pure presentation —
  * all data comes in as props so this can be driven by mock data today and
@@ -49,61 +60,79 @@ export default function PersonCard({
   onViewProfile,
   isConnecting,
 }: PersonCardProps) {
+  const { visible, remaining } = buildTagRow(sharedTags, otherTags);
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, isVerified ? styles.cardVerified : styles.cardUnverified]}>
       <View style={styles.header}>
-        <Avatar avatarUrl={avatarUrl} displayName={name} size={44} />
+        <Avatar avatarUrl={avatarUrl} displayName={name} size={44} verified={isVerified} />
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
-            <Text style={styles.name} numberOfLines={1}>
+            <Text variant="name" numberOfLines={1} style={styles.nameFlex}>
               {name}
             </Text>
-            {isVerified && <Ionicons name="checkmark-circle" size={16} color={colors.success} />}
+            {isVerified && <Ionicons name="checkmark-circle" size={16} color={colors.gold.default} />}
           </View>
           <View style={styles.metaRow}>
-            <Text style={styles.metaText}>{formatDistance(distanceKm)}</Text>
-            <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.metaText}>{sharedTagCount} shared</Text>
-            <Text style={styles.metaDot}>·</Text>
-            <OnlineBadge isOnline={isOnline} />
+            <Text variant="meta">{formatDistance(distanceKm)}</Text>
+            <Text variant="meta" color={colors.text.faint}>
+              ·
+            </Text>
+            <Text variant="meta">{sharedTagCount} shared</Text>
+            <Text variant="meta" color={colors.text.faint}>
+              ·
+            </Text>
+            <View style={styles.onlineRow}>
+              <View style={[styles.dot, { backgroundColor: isOnline ? colors.state.success : colors.state.danger }]} />
+              <Text variant="meta" color={isOnline ? colors.state.success : colors.state.danger}>
+                {isOnline ? 'Online' : 'Offline'}
+              </Text>
+            </View>
           </View>
+          {!isVerified && (
+            <View style={styles.unverifiedRow}>
+              <Ionicons name="alert-circle-outline" size={12} color={colors.text.faint} />
+              <Text variant="meta" color={colors.text.faint}>
+                Verification pending
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
       {/* Safety primitive: keep "virtual cheers first" visible regardless of other tags. */}
       {virtualCheersFirst && (
         <View style={styles.cheersPill}>
-          <Ionicons name="videocam" size={14} color={colors.success} />
-          <Text style={styles.cheersPillText}>Virtual cheers first</Text>
+          <Ionicons name="videocam" size={14} color={colors.state.success} />
+          <Text variant="tag" color={colors.state.success}>
+            Virtual cheers first
+          </Text>
         </View>
       )}
 
       {prefersPublicPlace && (
         <View style={styles.publicPlaceRow}>
-          <Ionicons name="storefront-outline" size={13} color={colors.textSecondary} />
-          <Text style={styles.publicPlaceText}>Prefers a public place</Text>
+          <Ionicons name="storefront-outline" size={13} color={colors.text.muted} />
+          <Text variant="meta">Prefers a public place</Text>
         </View>
       )}
 
-      <View style={styles.chipsWrap}>
-        <ChipList sharedTags={sharedTags} otherTags={otherTags} />
+      <View style={styles.tagsWrap}>
+        {visible.map((tag, index) => (
+          <Tag key={`${tag.variant}-${tag.label}-${index}`} label={tag.label} variant={tag.variant} />
+        ))}
+        {remaining > 0 && <Tag label={`+${remaining} more`} variant="muted" />}
       </View>
 
       <View style={styles.actions}>
-        <Pressable
-          style={({ pressed }) => [styles.cheersButton, pressed && styles.cheersButtonPressed]}
+        <Button
+          label={isConnecting ? 'Connecting…' : 'Say cheers'}
           onPress={onSayCheers}
           disabled={isConnecting}
-        >
-          <Ionicons name="wine" size={16} color={colors.onPrimary} />
-          <Text style={styles.cheersButtonText}>{isConnecting ? 'Connecting…' : 'Say cheers'}</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.profileButton, pressed && styles.profileButtonPressed]}
-          onPress={onViewProfile}
-        >
-          <Text style={styles.profileButtonText}>Profile</Text>
-        </Pressable>
+          icon={<Ionicons name="wine" size={16} color={colors.gold.on} />}
+          style={styles.fill}
+        />
+        <Button label="Profile" onPress={onViewProfile} variant="secondary" style={styles.fill} />
       </View>
     </View>
   );
@@ -112,58 +141,43 @@ export default function PersonCard({
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surface.card,
     borderRadius: radii.lg,
     padding: spacing.lg,
     marginBottom: spacing.md,
   },
+  // Verified cards get the standard border; unverified cards use a subtler,
+  // dimmer border so verified profiles read as visually more "trustworthy".
+  cardVerified: { borderColor: colors.border.default },
+  cardUnverified: { borderColor: colors.border.subtle },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerText: { flex: 1, minWidth: 0 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  name: { ...typography.label, flexShrink: 1 },
+  nameFlex: { flexShrink: 1 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },
-  metaText: { fontSize: 12.5, color: colors.textSecondary },
-  metaDot: { color: colors.textMuted, fontSize: 12.5 },
+  onlineRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dot: { width: 7, height: 7, borderRadius: 4 },
+  unverifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   cheersPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    backgroundColor: colors.chipSharedBg,
+    backgroundColor: colors.chipShared.bg,
     borderWidth: 1,
-    borderColor: colors.success,
+    borderColor: colors.state.success,
     borderRadius: radii.pill,
     paddingVertical: 6,
     paddingHorizontal: spacing.sm + 2,
     marginTop: spacing.md,
   },
-  cheersPillText: { fontSize: 12.5, fontWeight: '700', color: colors.success },
   publicPlaceRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.xs },
-  publicPlaceText: { fontSize: 12, color: colors.textSecondary },
-  chipsWrap: { marginTop: spacing.md },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
-  cheersButton: {
-    flex: 1,
+  tagsWrap: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.primary,
-    borderRadius: radii.md,
-    paddingVertical: 12,
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.md,
   },
-  cheersButtonPressed: { opacity: 0.85 },
-  cheersButtonText: { color: colors.onPrimary, fontWeight: '700', fontSize: 14.5 },
-  profileButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.primaryMuted,
-    paddingVertical: 12,
-  },
-  profileButtonPressed: { opacity: 0.7 },
-  profileButtonText: { color: colors.primary, fontWeight: '700', fontSize: 14.5 },
+  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
+  fill: { flex: 1 },
 });

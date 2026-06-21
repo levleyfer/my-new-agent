@@ -30,6 +30,7 @@ export interface UserProfile {
 export interface MyProfile extends UserProfile {
   email: string;
   is_age_verified: boolean;
+  notify_message_preview: boolean;
 }
 
 export interface DiscoverCandidate extends UserProfile {
