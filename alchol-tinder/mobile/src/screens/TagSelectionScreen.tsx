@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
 import { listTags, updateMyTags } from '../api/client';
 import { ApiError, Tag } from '../api/types';
@@ -16,6 +17,22 @@ const CATEGORY_LABELS: Record<Tag['category'], string> = {
   taste: 'Taste / Drink',
   vibe: 'Vibe',
   logistics: 'Logistics',
+};
+
+// These two logistics tags are safety primitives (see CLAUDE.md), not just
+// preferences — they get their own elevated UI instead of sitting in the
+// generic chip grid.
+const SAFETY_TAG_NAMES = new Set(['prefer public place', 'virtual cheers first']);
+
+const SAFETY_TAG_META: Record<string, { icon: keyof typeof Ionicons.glyphMap; description: string }> = {
+  'prefer public place': {
+    icon: 'storefront-outline',
+    description: 'Matches will see you’d rather meet somewhere public first.',
+  },
+  'virtual cheers first': {
+    icon: 'videocam-outline',
+    description: 'A quick video hello before meeting up, to confirm it’s really them.',
+  },
 };
 
 export default function TagSelectionScreen({ navigation }: Props) {
@@ -36,9 +53,12 @@ export default function TagSelectionScreen({ navigation }: Props) {
     }
   }, [profile]);
 
+  const safetyTags = useMemo(() => tags.filter((t) => SAFETY_TAG_NAMES.has(t.name)), [tags]);
+
   const grouped = useMemo(() => {
     const byCategory = new Map<Tag['category'], Tag[]>();
     for (const tag of tags) {
+      if (SAFETY_TAG_NAMES.has(tag.name)) continue;
       const list = byCategory.get(tag.category) ?? [];
       list.push(tag);
       byCategory.set(tag.category, list);
@@ -62,7 +82,13 @@ export default function TagSelectionScreen({ navigation }: Props) {
     try {
       await updateMyTags(token, Array.from(selected));
       await refreshProfile();
-      navigation.replace('Discover');
+      // Reached during onboarding (no back stack) vs. editing from Profile
+      // (pushed on top of it) need different "done" behavior.
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        navigation.replace('Discover');
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save tags.');
     } finally {
@@ -85,6 +111,37 @@ export default function TagSelectionScreen({ navigation }: Props) {
         <Text style={[typography.subtitle, styles.subtitle]}>
           Pick what fits your vibe and taste — matching is never about how much you drink.
         </Text>
+
+        <View style={styles.safetyBox}>
+          <View style={styles.safetyHeader}>
+            <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+            <Text style={styles.safetyTitle}>Meet safely</Text>
+          </View>
+          {safetyTags.map((tag) => {
+            const meta = SAFETY_TAG_META[tag.name];
+            const isSelected = selected.has(tag.id);
+            return (
+              <View key={tag.id} style={styles.safetyRow}>
+                <Ionicons
+                  name={meta?.icon ?? 'shield-checkmark-outline'}
+                  size={22}
+                  color={isSelected ? colors.primary : colors.textMuted}
+                  style={styles.safetyIcon}
+                />
+                <View style={styles.safetyTextCol}>
+                  <Text style={styles.safetyLabel}>{tag.name}</Text>
+                  {meta?.description && <Text style={styles.safetyDescription}>{meta.description}</Text>}
+                </View>
+                <Switch
+                  value={isSelected}
+                  onValueChange={() => toggle(tag.id)}
+                  trackColor={{ false: colors.surface, true: colors.primaryMuted }}
+                  thumbColor={isSelected ? colors.primary : colors.textMuted}
+                />
+              </View>
+            );
+          })}
+        </View>
 
         {Array.from(grouped.entries()).map(([category, categoryTags]) => (
           <View key={category} style={styles.section}>
@@ -122,6 +179,21 @@ const styles = StyleSheet.create({
   center: { justifyContent: 'center', alignItems: 'center' },
   container: { padding: spacing.xl, paddingBottom: 110 },
   subtitle: { marginBottom: spacing.xl },
+  safetyBox: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.accentMuted,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  safetyHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  safetyTitle: { ...typography.label },
+  safetyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  safetyIcon: { width: 22 },
+  safetyTextCol: { flex: 1 },
+  safetyLabel: { fontSize: 15, fontWeight: '600', color: colors.textPrimary, textTransform: 'capitalize' },
+  safetyDescription: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
   section: { marginBottom: spacing.xl },
   sectionTitle: { ...typography.label, marginBottom: spacing.md },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

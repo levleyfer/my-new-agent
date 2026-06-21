@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.schemas.user import UserRead
 
@@ -11,13 +11,16 @@ class MatchCreateRequest(BaseModel):
 
 
 class MatchRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: uuid.UUID
     status: str
     compatibility_score: int
     created_at: datetime
     other_user: UserRead
+    my_rating: int | None = None
+
+
+class RatingCreateRequest(BaseModel):
+    score: int = Field(ge=1, le=5)
 
 
 class VideoSessionRead(BaseModel):

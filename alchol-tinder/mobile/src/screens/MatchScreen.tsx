@@ -3,7 +3,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { blockUser, reportUser, startVirtualCheers } from '../api/client';
+import { blockUser, rateMatch, reportUser, startVirtualCheers } from '../api/client';
 import { ApiError, ReportReason } from '../api/types';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
@@ -15,9 +15,10 @@ import { colors, radii, spacing, typography } from '../theme/theme';
 type Props = NativeStackScreenProps<AppStackParamList, 'Match'>;
 
 export default function MatchScreen({ route, navigation }: Props) {
-  const { match } = route.params;
   const { token } = useAuth();
+  const [match, setMatch] = useState(route.params.match);
   const [starting, setStarting] = useState(false);
+  const [rating, setRating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [safetyMenuVisible, setSafetyMenuVisible] = useState(false);
 
@@ -32,6 +33,19 @@ export default function MatchScreen({ route, navigation }: Props) {
       setError(err instanceof ApiError ? err.message : 'Could not start virtual cheers.');
     } finally {
       setStarting(false);
+    }
+  };
+
+  const handleRate = async (score: number) => {
+    if (!token) return;
+    setError(null);
+    setRating(true);
+    try {
+      setMatch(await rateMatch(token, match.id, score));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not submit rating.');
+    } finally {
+      setRating(false);
     }
   };
 
@@ -73,6 +87,33 @@ export default function MatchScreen({ route, navigation }: Props) {
 
       <PrimaryButton title="Start virtual cheers" onPress={handleStartCheers} loading={starting} />
 
+      <View style={styles.chatButtonSpacing}>
+        <PrimaryButton
+          title={`Message ${match.other_user.display_name}`}
+          onPress={() => navigation.navigate('Chat', { match })}
+          variant="ghost"
+        />
+      </View>
+
+      {match.status !== 'pending' && (
+        <View style={styles.rateBox}>
+          <Text style={styles.rateLabel}>
+            {match.my_rating ? `You rated ${match.other_user.display_name}` : `Rate ${match.other_user.display_name}`}
+          </Text>
+          <View style={styles.starRow}>
+            {[1, 2, 3, 4, 5].map((value) => (
+              <Pressable key={value} onPress={() => handleRate(value)} disabled={rating} hitSlop={6}>
+                <Ionicons
+                  name={(match.my_rating ?? 0) >= value ? 'star' : 'star-outline'}
+                  size={28}
+                  color={colors.primary}
+                />
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
       <Pressable style={styles.safetyLink} onPress={() => setSafetyMenuVisible(true)}>
         <Text style={styles.safetyLinkText}>Report or block {match.other_user.display_name}</Text>
       </Pressable>
@@ -93,6 +134,10 @@ const styles = StyleSheet.create({
   emoji: { fontSize: 40, textAlign: 'center', marginBottom: spacing.sm },
   title: { textAlign: 'center' },
   meta: { textAlign: 'center', marginBottom: spacing.xl },
+  chatButtonSpacing: { marginTop: spacing.md },
+  rateBox: { alignItems: 'center', marginTop: spacing.xl },
+  rateLabel: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm },
+  starRow: { flexDirection: 'row', gap: spacing.xs },
   safetyBox: {
     flexDirection: 'row',
     alignItems: 'center',

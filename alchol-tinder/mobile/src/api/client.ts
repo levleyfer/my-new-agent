@@ -2,6 +2,7 @@ import { API_BASE_URL } from './config';
 import {
   ApiError,
   ApiErrorDetail,
+  ChatMessage,
   DiscoverCandidate,
   LoginPayload,
   Match,
@@ -106,6 +107,18 @@ export function listMyMatches(token: string): Promise<Match[]> {
 
 export function startVirtualCheers(token: string, matchId: string): Promise<VideoSession> {
   return request(`/matches/${matchId}/video`, { method: 'POST', token });
+}
+
+export function rateMatch(token: string, matchId: string, score: number): Promise<Match> {
+  return request(`/matches/${matchId}/rate`, { method: 'POST', token, body: { score } });
+}
+
+export function listMessages(token: string, matchId: string): Promise<ChatMessage[]> {
+  return request(`/matches/${matchId}/messages`, { token });
+}
+
+export function sendMessage(token: string, matchId: string, body: string): Promise<ChatMessage> {
+  return request(`/matches/${matchId}/messages`, { method: 'POST', token, body: { body } });
 }
 
 export function blockUser(token: string, userId: string): Promise<void> {

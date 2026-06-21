@@ -1,15 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { verifyMyAge } from '../api/client';
 import { ApiError } from '../api/types';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 import { useAuth } from '../context/AuthContext';
+import { AppStackParamList } from '../navigation/types';
 import { colors, radii, spacing, typography } from '../theme/theme';
 
-export default function ProfileScreen() {
+type Props = NativeStackScreenProps<AppStackParamList, 'Profile'>;
+
+export default function ProfileScreen({ navigation }: Props) {
   const { profile, token, refreshProfile, logout } = useAuth();
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +63,12 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Tags</Text>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Tags</Text>
+        <Pressable onPress={() => navigation.navigate('TagSelection')}>
+          <Text style={styles.editLink}>Edit</Text>
+        </Pressable>
+      </View>
       {profile.tags.length === 0 ? (
         <Text style={typography.caption}>No tags selected yet.</Text>
       ) : (
@@ -83,6 +92,11 @@ export default function ProfileScreen() {
       )}
 
       {error && <Text style={styles.error}>{error}</Text>}
+
+      <Pressable style={styles.blockedLink} onPress={() => navigation.navigate('BlockedUsers')}>
+        <Ionicons name="ban-outline" size={16} color={colors.textSecondary} />
+        <Text style={styles.blockedLinkText}>Blocked users</Text>
+      </Pressable>
 
       <View style={styles.logoutContainer}>
         <PrimaryButton title="Log out" onPress={logout} variant="ghost" />
@@ -108,7 +122,14 @@ const styles = StyleSheet.create({
   },
   statValue: { color: colors.primary, fontSize: 16, fontWeight: '700' },
   statLabel: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  sectionTitle: { ...typography.label, marginBottom: spacing.sm },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  sectionTitle: { ...typography.label, marginBottom: 0 },
+  editLink: { color: colors.primary, fontSize: 13, fontWeight: '600' },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   tagChip: {
     backgroundColor: colors.surface,
@@ -129,5 +150,12 @@ const styles = StyleSheet.create({
     borderColor: colors.accentMuted,
   },
   verifyText: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.md },
+  blockedLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xl,
+  },
+  blockedLinkText: { color: colors.textSecondary, fontSize: 13 },
   logoutContainer: { marginTop: spacing.xxl },
 });

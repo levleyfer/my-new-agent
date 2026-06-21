@@ -3,11 +3,17 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 
+import IncomingCallModal from './src/components/IncomingCallModal';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { IncomingCallProvider } from './src/context/IncomingCallContext';
+import { navigationRef } from './src/navigation/navigationRef';
 import { AppStackParamList, AuthStackParamList } from './src/navigation/types';
+import BlockedUsersScreen from './src/screens/BlockedUsersScreen';
+import ChatScreen from './src/screens/ChatScreen';
 import DiscoverScreen from './src/screens/DiscoverScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import MatchScreen from './src/screens/MatchScreen';
+import MatchesScreen from './src/screens/MatchesScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import TagSelectionScreen from './src/screens/TagSelectionScreen';
@@ -58,7 +64,18 @@ function AppNavigator() {
       />
       <AppStack.Screen name="Discover" component={DiscoverScreen} options={{ title: 'Nearby' }} />
       <AppStack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Your profile' }} />
+      <AppStack.Screen name="Matches" component={MatchesScreen} options={{ title: 'Your matches' }} />
+      <AppStack.Screen
+        name="BlockedUsers"
+        component={BlockedUsersScreen}
+        options={{ title: 'Blocked users' }}
+      />
       <AppStack.Screen name="Match" component={MatchScreen} options={{ title: 'Match' }} />
+      <AppStack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={({ route }) => ({ title: route.params.match.other_user.display_name })}
+      />
       <AppStack.Screen
         name="VirtualCheers"
         component={VirtualCheersScreen}
@@ -85,10 +102,13 @@ function RootNavigator() {
 export default function App() {
   return (
     <AuthProvider>
-      <NavigationContainer theme={navigationTheme}>
-        <StatusBar style="light" />
-        <RootNavigator />
-      </NavigationContainer>
+      <IncomingCallProvider>
+        <NavigationContainer ref={navigationRef} theme={navigationTheme}>
+          <StatusBar style="light" />
+          <RootNavigator />
+        </NavigationContainer>
+        <IncomingCallModal />
+      </IncomingCallProvider>
     </AuthProvider>
   );
 }

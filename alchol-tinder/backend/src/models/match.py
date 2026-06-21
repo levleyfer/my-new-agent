@@ -41,10 +41,10 @@ class Match(Base):
 
 
 class VideoSession(Base):
-    """A WebRTC room tied to a match — the 'virtual cheers' safety step before meeting.
-
-    MVP placeholder: room_name is just an opaque identifier. Wiring it to a real
-    managed WebRTC provider (LiveKit/Daily) is a follow-up — see VIDEO_PROVIDER_API_KEY.
+    """A Jitsi Meet room tied to a match — the 'virtual cheers' safety step
+    before meeting. room_name is reassigned to a fresh random value on every
+    call (see routers/matches.py) rather than reused, since reusing one name
+    accumulates lobby/lock state on Jitsi's public server over many calls.
     """
 
     __tablename__ = "video_sessions"

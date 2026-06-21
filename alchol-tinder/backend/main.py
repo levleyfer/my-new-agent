@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.routers import auth, discover, matches, safety, tags, users
+from src.routers import auth, calls, discover, matches, safety, tags, users
 
 app = FastAPI(title="Social Drinking App API")
 
@@ -22,6 +22,7 @@ app.include_router(safety.router)
 app.include_router(tags.router)
 app.include_router(discover.router)
 app.include_router(matches.router)
+app.include_router(calls.router)
 
 
 @app.get("/health", tags=["meta"])

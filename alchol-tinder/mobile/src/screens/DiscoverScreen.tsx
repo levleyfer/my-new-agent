@@ -23,6 +23,9 @@ import { colors, radii, spacing, typography } from '../theme/theme';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Discover'>;
 
+// Surfaced as trust badges, not buried in the generic tag list — see CLAUDE.md.
+const SAFETY_TAG_NAMES = new Set(['prefer public place', 'virtual cheers first']);
+
 export default function DiscoverScreen({ navigation }: Props) {
   const { token, profile, refreshProfile } = useAuth();
   const [candidates, setCandidates] = useState<DiscoverCandidate[]>([]);
@@ -186,7 +189,27 @@ export default function DiscoverScreen({ navigation }: Props) {
                 <Text style={styles.cardMetaDot}>·</Text>
                 <Text style={styles.cardMeta}>{item.shared_tag_count} shared tags</Text>
               </View>
-              <Text style={styles.cardTags}>{item.tags.map((t) => t.name).join(' · ')}</Text>
+
+              {item.tags.some((t) => SAFETY_TAG_NAMES.has(t.name)) && (
+                <View style={styles.safetyBadgeRow}>
+                  {item.tags
+                    .filter((t) => SAFETY_TAG_NAMES.has(t.name))
+                    .map((t) => (
+                      <View key={t.id} style={styles.safetyBadge}>
+                        <Ionicons
+                          name={t.name === 'prefer public place' ? 'storefront-outline' : 'videocam-outline'}
+                          size={13}
+                          color={colors.success}
+                        />
+                        <Text style={styles.safetyBadgeText}>{t.name}</Text>
+                      </View>
+                    ))}
+                </View>
+              )}
+
+              <Text style={styles.cardTags}>
+                {item.tags.filter((t) => !SAFETY_TAG_NAMES.has(t.name)).map((t) => t.name).join(' · ')}
+              </Text>
               <Pressable
                 style={({ pressed }) => [styles.connectButton, pressed && styles.connectButtonPressed]}
                 onPress={() => handleConnect(item)}
@@ -203,10 +226,16 @@ export default function DiscoverScreen({ navigation }: Props) {
         />
       )}
 
-      <Pressable style={styles.profileLink} onPress={() => navigation.navigate('Profile')}>
-        <Ionicons name="person-circle-outline" size={18} color={colors.primary} />
-        <Text style={styles.profileLinkText}>My profile</Text>
-      </Pressable>
+      <View style={styles.footerLinks}>
+        <Pressable style={styles.profileLink} onPress={() => navigation.navigate('Matches')}>
+          <Ionicons name="wine-outline" size={18} color={colors.primary} />
+          <Text style={styles.profileLinkText}>My matches</Text>
+        </Pressable>
+        <Pressable style={styles.profileLink} onPress={() => navigation.navigate('Profile')}>
+          <Ionicons name="person-circle-outline" size={18} color={colors.primary} />
+          <Text style={styles.profileLinkText}>My profile</Text>
+        </Pressable>
+      </View>
 
       {safetyTarget && (
         <SafetyMenu
@@ -255,6 +284,19 @@ const styles = StyleSheet.create({
   cardMeta: { fontSize: 13, color: colors.textSecondary },
   cardMetaDot: { color: colors.textMuted },
   cardTags: { fontSize: 13, color: colors.primary, marginTop: spacing.sm },
+  safetyBadgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  safetyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.success,
+    borderRadius: radii.pill,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+  },
+  safetyBadgeText: { fontSize: 12, color: colors.success, fontWeight: '600' },
   connectButton: {
     backgroundColor: colors.primary,
     borderRadius: radii.md,
@@ -264,6 +306,7 @@ const styles = StyleSheet.create({
   },
   connectButtonPressed: { opacity: 0.8 },
   connectButtonText: { color: colors.background, fontWeight: '700' },
+  footerLinks: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl },
   profileLink: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -11,8 +11,8 @@ _MIN_AGE = get_settings().MIN_AGE
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
-    display_name: str
+    password: str = Field(min_length=8, max_length=72)  # bcrypt truncates beyond 72 bytes
+    display_name: str = Field(min_length=1, max_length=80)
     birth_date: date
 
     @field_validator("birth_date")

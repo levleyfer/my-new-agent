@@ -109,7 +109,11 @@ async def verify_my_age(
 
 
 @router.get("/{user_id}", response_model=UserRead)
-async def get_user(user_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> User:
+async def get_user(
+    user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
     user = await db.scalar(
         select(User).options(selectinload(User.tags)).where(User.id == user_id)
     )

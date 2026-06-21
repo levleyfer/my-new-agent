@@ -15,3 +15,5 @@ const configuredUrl = Constants.expoConfig?.extra?.apiBaseUrl as string | undefi
 export const API_BASE_URL = configuredUrl && configuredUrl.length > 0
   ? configuredUrl
   : resolveDefaultBaseUrl();
+
+export const WS_BASE_URL = API_BASE_URL.replace(/^http/, 'ws');

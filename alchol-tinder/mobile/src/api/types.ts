@@ -43,11 +43,20 @@ export interface Match {
   compatibility_score: number;
   created_at: string;
   other_user: UserProfile;
+  my_rating: number | null;
 }
 
 export interface VideoSession {
   match_id: string;
   room_name: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  match_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
 }
 
 export type ReportReason = 'inappropriate_behavior' | 'fake_profile' | 'harassment' | 'safety_concern' | 'other';

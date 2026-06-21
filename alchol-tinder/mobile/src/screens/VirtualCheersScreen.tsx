@@ -8,10 +8,11 @@ import { AppStackParamList } from '../navigation/types';
 import { colors, radii, spacing } from '../theme/theme';
 
 /**
- * Placeholder for the real WebRTC "virtual cheers" call (see CLAUDE.md: managed
- * provider — LiveKit/Daily — not a custom media server). The backend already
- * creates a room per match (`roomName`); wiring an actual provider SDK here is
- * a follow-up once an account/API key exists.
+ * Native (iOS/Android) placeholder. The real call is live on web — see
+ * VirtualCheersScreen.web.tsx, which embeds Jitsi Meet's free public server
+ * directly in the browser. Native would need an embeddable Jitsi/WebRTC SDK
+ * (native modules), which means a custom dev-client build (EAS Build)
+ * instead of plain Expo Go — a follow-up once this app has that pipeline.
  */
 type Props = NativeStackScreenProps<AppStackParamList, 'VirtualCheers'>;
 
@@ -26,8 +27,8 @@ export default function VirtualCheersScreen({ route, navigation }: Props) {
         <Text style={styles.roomName}>{roomName}</Text>
       </View>
       <Text style={styles.note}>
-        Real video isn't wired up yet — this room id is ready for a WebRTC provider
-        (LiveKit/Daily) integration.
+        Real video is live on web. Native needs a custom dev-client build
+        for an embeddable video SDK — coming soon.
       </Text>
       <PrimaryButton title="End call" onPress={() => navigation.popToTop()} variant="danger" />
     </ScreenContainer>
