@@ -8,6 +8,7 @@ import { useAuth } from './AuthContext';
 interface IncomingCall {
   matchId: string;
   roomName: string;
+  token: string;
   callerName: string;
 }
 
@@ -72,6 +73,7 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
             setIncomingCall({
               matchId: data.match_id,
               roomName: data.room_name,
+              token: data.token,
               callerName: data.caller_name,
             });
           } else if (data.type === 'call_declined') {
@@ -123,10 +125,10 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
       },
       accept: () => {
         if (!incomingCall) return;
-        const { matchId, roomName } = incomingCall;
+        const { matchId, roomName, token: callToken } = incomingCall;
         setIncomingCall(null);
         if (navigationRef.isReady()) {
-          navigationRef.navigate('VirtualCheers', { matchId, roomName });
+          navigationRef.navigate('VirtualCheers', { matchId, roomName, token: callToken });
         }
       },
       decline: () => {

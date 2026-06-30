@@ -6,6 +6,7 @@ __pycache__/
 .env
 *.env
 !.env.example
+*.pem
 # Node / RN
 node_modules/
 .expo/

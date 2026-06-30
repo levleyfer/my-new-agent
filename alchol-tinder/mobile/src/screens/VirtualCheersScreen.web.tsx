@@ -2,6 +2,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { JAAS_APP_ID } from '../api/jaasConfig';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 import { useAuth } from '../context/AuthContext';
@@ -11,8 +12,13 @@ import { colors, radii, spacing } from '../theme/theme';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'VirtualCheers'>;
 
-const JITSI_DOMAIN = 'meet.jit.si';
-const JITSI_SCRIPT_SRC = `https://${JITSI_DOMAIN}/external_api.js`;
+// JaaS (Jitsi as a Service, jaas.8x8.vc) — not the free public meet.jit.si
+// server. That server requires anonymous users to log in via Google/
+// Facebook/Microsoft to become "moderator" before a room will actually
+// start; JaaS rooms are gated by our own signed JWT instead (see
+// backend/src/services/jaas.py), so there's no waiting-for-moderator wall.
+const JITSI_DOMAIN = '8x8.vc';
+const JITSI_SCRIPT_SRC = `https://${JITSI_DOMAIN}/${JAAS_APP_ID}/external_api.js`;
 
 interface JitsiMeetExternalAPI {
   addEventListener(event: string, handler: () => void): void;
@@ -45,10 +51,10 @@ function loadJitsiScript(): Promise<void> {
 }
 
 /**
- * Real "virtual cheers" video call — web only for now. Embeds Jitsi Meet's
- * free public server (meet.jit.si) directly in the browser; no backend
- * token needed, and no UDP/dev-tunnel concerns since the browser connects
- * straight to Jitsi's infrastructure, not through our own backend.
+ * Real "virtual cheers" video call — web only for now. Embeds JaaS (Jitsi as
+ * a Service) directly in the browser using a backend-signed JWT per
+ * participant; the browser still connects straight to 8x8's infrastructure,
+ * not through our own backend — the backend's only job is signing the token.
  *
  * Native (iOS/Android) still renders the placeholder in VirtualCheersScreen.tsx
  * — an embeddable native SDK would need its own native-module integration
@@ -60,7 +66,7 @@ function loadJitsiScript(): Promise<void> {
 type Status = 'loading' | 'ready' | 'error';
 
 export default function VirtualCheersScreen({ route, navigation }: Props) {
-  const { matchId, roomName } = route.params;
+  const { matchId, roomName, token } = route.params;
   const { profile } = useAuth();
   const { declinedMatchId, acknowledgeDecline } = useIncomingCall();
   const [status, setStatus] = useState<Status>('loading');
@@ -80,7 +86,8 @@ export default function VirtualCheersScreen({ route, navigation }: Props) {
         if (cancelled || !window.JitsiMeetExternalAPI || !mountRef.current) return;
 
         const api = new window.JitsiMeetExternalAPI(JITSI_DOMAIN, {
-          roomName,
+          roomName: `${JAAS_APP_ID}/${roomName}`,
+          jwt: token,
           parentNode: mountRef.current as unknown as HTMLElement,
           width: '100%',
           height: '100%',
@@ -113,7 +120,7 @@ export default function VirtualCheersScreen({ route, navigation }: Props) {
       apiRef.current?.dispose();
       apiRef.current = null;
     };
-  }, [roomName, profile?.display_name, navigation]);
+  }, [roomName, token, profile?.display_name, navigation]);
 
   useEffect(() => {
     if (declinedMatchId !== matchId) return;

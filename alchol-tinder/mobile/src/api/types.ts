@@ -52,6 +52,7 @@ export interface Match {
 export interface VideoSession {
   match_id: string;
   room_name: string;
+  token: string;
 }
 
 export interface ChatMessage {

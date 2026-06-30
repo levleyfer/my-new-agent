@@ -28,3 +28,7 @@ class VideoSessionRead(BaseModel):
 
     match_id: uuid.UUID
     room_name: str
+    # Signed JaaS room-access JWT, scoped to this one room and this one user
+    # (see services/jaas.py) — required to join on JaaS, never reused across
+    # participants or calls.
+    token: str

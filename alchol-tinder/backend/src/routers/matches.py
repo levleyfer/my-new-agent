@@ -15,6 +15,7 @@ from src.models.rating import Rating
 from src.models.user import User
 from src.schemas.match import MatchCreateRequest, MatchRead, RatingCreateRequest, VideoSessionRead
 from src.schemas.message import MessageCreateRequest, MessageRead
+from src.services.jaas import generate_room_token
 from src.services.push import send_new_message_push
 from src.services.safety import get_blocked_user_ids
 
@@ -125,18 +126,18 @@ async def start_virtual_cheers(
     match_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> VideoSession:
+) -> VideoSessionRead:
     """Starts a fresh 'virtual cheers' call for this match and rings the other
     participant over their call-signaling websocket (see core/connections.py).
 
     Each call gets a brand-new room name rather than reusing one persistent
-    name per match — Jitsi's free public server accumulates state (locks,
-    lobby mode) on a room name over repeated joins/leaves, so a long-lived
-    name eventually fails with conference.connectionError.membersOnly. A
-    fresh name every call avoids that entirely. The frontend's "accept"
-    action never calls this endpoint itself (it already has the room name
-    from the ring payload), so there's no risk of the acceptor generating a
-    second, mismatched room for the same call.
+    name per match, and each participant gets their own signed JaaS token
+    (see services/jaas.py) scoped to that exact room — required for anyone
+    to join at all on JaaS, unlike the free public meet.jit.si server. The
+    frontend's "accept" action never calls this endpoint itself (it already
+    has the room name and its own token from the ring payload), so there's
+    no risk of the acceptor generating a second, mismatched room for the
+    same call.
     """
     match = await db.scalar(
         select(Match).options(selectinload(Match.video_session)).where(Match.id == match_id)
@@ -144,6 +145,10 @@ async def start_virtual_cheers(
     if not match:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Match not found")
     _require_participant(match, current_user.id)
+
+    callee_id = match.user_b_id if match.user_a_id == current_user.id else match.user_a_id
+    callee = await db.get(User, callee_id)
+    assert callee is not None  # FK guarantees this
 
     room_name = f"cheers-{uuid.uuid4()}"
     session = match.video_session
@@ -156,17 +161,24 @@ async def start_virtual_cheers(
     await db.commit()
     await db.refresh(session)
 
-    callee_id = match.user_b_id if match.user_a_id == current_user.id else match.user_a_id
+    caller_token = generate_room_token(
+        room_name=room_name, user_id=current_user.id, display_name=current_user.display_name
+    )
+    callee_token = generate_room_token(
+        room_name=room_name, user_id=callee.id, display_name=callee.display_name
+    )
+
     await manager.send_to_user(
         callee_id,
         {
             "type": "incoming_call",
             "match_id": str(match.id),
             "room_name": session.room_name,
+            "token": callee_token,
             "caller_name": current_user.display_name,
         },
     )
-    return session
+    return VideoSessionRead(match_id=session.match_id, room_name=session.room_name, token=caller_token)
 
 
 @router.post("/{match_id}/rate", response_model=MatchRead)

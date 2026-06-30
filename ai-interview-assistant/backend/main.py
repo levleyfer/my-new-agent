@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, Request, status
@@ -538,10 +539,11 @@ async def analytics_progress(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    since = datetime.now(timezone.utc) - timedelta(days=days)
     rows = (await db.execute(
         select(Analysis.overall_score, Analysis.created_at, Analysis.session_id)
         .join(Session, Session.id == Analysis.session_id)
-        .where(Session.user_id == current_user.id)
+        .where(Session.user_id == current_user.id, Analysis.created_at >= since)
         .order_by(Analysis.created_at.asc())
     )).all()
 

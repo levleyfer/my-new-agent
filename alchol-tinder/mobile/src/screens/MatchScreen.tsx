@@ -30,7 +30,7 @@ export default function MatchScreen({ route, navigation }: Props) {
     setStarting(true);
     try {
       const session = await startVirtualCheers(token, match.id);
-      navigation.navigate('VirtualCheers', { matchId: match.id, roomName: session.room_name });
+      navigation.navigate('VirtualCheers', { matchId: match.id, roomName: session.room_name, token: session.token });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not start virtual cheers.');
     } finally {
