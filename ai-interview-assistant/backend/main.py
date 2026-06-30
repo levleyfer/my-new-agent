@@ -44,18 +44,20 @@ bearer_scheme = HTTPBearer()
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
 
-# ── Startup ───────────────────────────────────────────────────────────────────
+# ── Startup — create DB tables on app boot ─────────────────────────────────────
 
 @app.on_event("startup")
 async def create_tables():
+    """Create all database tables if they don't exist yet."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 
-# ── Health ────────────────────────────────────────────────────────────────────
+# ── Health — liveness + DB connectivity check ───────────────────────────────────
 
 @app.get("/health")
 async def health(db: AsyncSession = Depends(get_db)):
+    """Report basic liveness and database connectivity."""
     try:
         await db.execute(text("SELECT 1"))
         return {"status": "ok", "db": "connected"}
@@ -63,12 +65,13 @@ async def health(db: AsyncSession = Depends(get_db)):
         return {"status": "ok", "db": "error"}
 
 
-# ── Auth helpers ──────────────────────────────────────────────────────────────
+# ── Auth helpers — current-user dependency ──────────────────────────────────────
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
+    """Resolve the current User from a bearer access token, raising 401 if invalid."""
     token = credentials.credentials
     try:
         payload = auth_utils.decode_token(token)
@@ -86,11 +89,12 @@ async def get_current_user(
     return user
 
 
-# ── Auth routes ───────────────────────────────────────────────────────────────
+# ── Auth routes — register, login, refresh, me ───────────────────────────────────
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=201)
 @limiter.limit("5/minute")
 async def register(request: Request, body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    """Register a new user account."""
     existing = await db.execute(select(User).where(User.email == body.email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Email already registered")
@@ -109,6 +113,7 @@ async def register(request: Request, body: RegisterRequest, db: AsyncSession = D
 @app.post("/api/auth/login", response_model=TokenResponse)
 @limiter.limit("10/minute")
 async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends(get_db)):
+    """Authenticate a user and issue access/refresh tokens."""
     result = await db.execute(select(User).where(User.email == body.email, User.is_active == True))
     user = result.scalar_one_or_none()
     if not user or not auth_utils.verify_password(body.password, user.hashed_password):
@@ -122,6 +127,7 @@ async def login(request: Request, body: LoginRequest, db: AsyncSession = Depends
 
 @app.post("/api/auth/refresh", response_model=TokenResponse)
 async def refresh(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
+    """Issue a new token pair from a valid refresh token."""
     try:
         payload = auth_utils.decode_token(body.refresh_token)
     except ValueError:
@@ -143,10 +149,11 @@ async def refresh(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
 
 @app.get("/api/auth/me", response_model=UserResponse)
 async def me(current_user: User = Depends(get_current_user)):
+    """Return the currently authenticated user."""
     return current_user
 
 
-# ── Questions ─────────────────────────────────────────────────────────────────
+# ── Questions — list, random, get by id ──────────────────────────────────────────
 
 @app.get("/api/questions", response_model=QuestionList)
 async def list_questions(
@@ -157,6 +164,7 @@ async def list_questions(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
+    """List active questions, optionally filtered by category/difficulty."""
     query = select(Question).where(Question.is_active == True)
     count_query = select(func.count()).select_from(Question).where(Question.is_active == True)
 
@@ -180,6 +188,7 @@ async def random_question(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
+    """Return a random active question, optionally filtered by category/difficulty."""
     query = select(Question).where(Question.is_active == True)
     if category:
         query = query.where(Question.category == category)
@@ -200,6 +209,7 @@ async def get_question(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
+    """Fetch a single question by id."""
     result = await db.execute(select(Question).where(Question.id == question_id))
     q = result.scalar_one_or_none()
     if not q:
@@ -207,7 +217,7 @@ async def get_question(
     return q
 
 
-# ── Sessions ──────────────────────────────────────────────────────────────────
+# ── Sessions — create, list, get, delete ─────────────────────────────────────────
 
 @app.post("/api/sessions", response_model=SessionDetail, status_code=201)
 async def create_session(
@@ -215,6 +225,7 @@ async def create_session(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Create a new interview session for the given question."""
     q = (await db.execute(select(Question).where(Question.id == body.question_id))).scalar_one_or_none()
     if not q:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -243,6 +254,7 @@ async def list_sessions(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """List the current user's sessions, newest first."""
     count = (await db.execute(
         select(func.count()).select_from(Session).where(Session.user_id == current_user.id)
     )).scalar()
@@ -276,6 +288,7 @@ async def get_session(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Fetch a single session owned by the current user, with its relations eager-loaded."""
     result = await db.execute(
         select(Session)
         .options(
@@ -300,6 +313,7 @@ async def delete_session(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Delete a session and its recording/transcript/analysis, removing the audio file from disk."""
     result = await db.execute(
         select(Session)
         .options(
@@ -331,7 +345,7 @@ async def delete_session(
     await db.commit()
 
 
-# ── Recording upload + async pipeline ─────────────────────────────────────────
+# ── Recording upload + async pipeline — upload, audio fetch, status, transcribe+analyze ──
 
 async def _run_pipeline(session_id: uuid.UUID, file_path: Path, duration: float):
     """Background task: transcribe → analyze → update session status."""
@@ -414,6 +428,7 @@ async def upload_recording(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Save an uploaded recording and kick off background transcription + analysis."""
     result = await db.execute(select(Session).where(Session.id == session_id))
     session = result.scalar_one_or_none()
     if not session:
@@ -460,6 +475,7 @@ async def get_session_audio(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Stream back the stored audio file for a session."""
     result = await db.execute(
         select(Session)
         .options(selectinload(Session.recording))
@@ -484,6 +500,7 @@ async def recording_status(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Return the processing status of a session's recording pipeline."""
     result = await db.execute(select(Session).where(Session.id == session_id))
     session = result.scalar_one_or_none()
     if not session:
@@ -493,13 +510,14 @@ async def recording_status(
     return {"session_id": str(session_id), "status": session.status}
 
 
-# ── Analytics ─────────────────────────────────────────────────────────────────
+# ── Analytics — summary, progress, weaknesses, category breakdown, filler words ──
 
 @app.get("/api/analytics/summary", response_model=AnalyticsSummary)
 async def analytics_summary(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Return aggregate session counts and average scores for the current user."""
     session_ids_q = select(Session.id).where(Session.user_id == current_user.id)
 
     total = (await db.execute(
@@ -539,6 +557,7 @@ async def analytics_progress(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Return overall-score data points over the last N days for charting progress."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
     rows = (await db.execute(
         select(Analysis.overall_score, Analysis.created_at, Analysis.session_id)
@@ -560,6 +579,7 @@ async def analytics_weaknesses(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Return the most common weaknesses across the current user's analyses."""
     rows = (await db.execute(
         text("""
             SELECT w.value AS weakness, COUNT(*) AS cnt
@@ -582,6 +602,7 @@ async def analytics_category_breakdown(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Return average score and session count grouped by question category."""
     rows = (await db.execute(
         select(
             Question.category,
@@ -606,6 +627,7 @@ async def analytics_filler_words(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Return total filler-word counts across the current user's analyses."""
     rows = (await db.execute(
         text("""
             SELECT fw->>'word' AS word, SUM((fw->>'count')::int) AS total_count

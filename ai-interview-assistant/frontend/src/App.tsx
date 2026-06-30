@@ -1,15 +1,15 @@
-import { ReactNode, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useAuthStore } from "./store";
-import { useLangStore } from "./langStore";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import DashboardPage from "./pages/DashboardPage";
-import PracticePage from "./pages/PracticePage";
-import SessionPage from "./pages/SessionPage";
-import HistoryPage from "./pages/HistoryPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
-import Layout from "./pages/Layout";
+import { ReactNode, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useAuthStore } from './store';
+import { useLangStore } from './langStore';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import DashboardPage from './pages/DashboardPage';
+import PracticePage from './pages/PracticePage';
+import SessionPage from './pages/SessionPage';
+import HistoryPage from './pages/HistoryPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import Layout from './pages/Layout';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -22,12 +22,12 @@ export default function App() {
   const { lang, theme } = useLangStore();
 
   useEffect(() => {
-    document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
+    document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
     document.documentElement.lang = lang;
   }, [lang]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
   return (

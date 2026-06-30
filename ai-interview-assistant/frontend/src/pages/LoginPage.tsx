@@ -1,15 +1,15 @@
-import { useState, FormEvent } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { login, getMe } from "../api";
-import { useAuthStore } from "../store";
-import { useLangStore } from "../langStore";
-import { translations } from "../i18n";
-import { Mic, CheckCircle, Moon, Sun } from "lucide-react";
+import { useState, FormEvent } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { login, getMe } from '../api';
+import { useAuthStore } from '../store';
+import { useLangStore } from '../langStore';
+import { translations } from '../i18n';
+import { Mic, CheckCircle, Moon, Sun } from 'lucide-react';
 
 const FEATURES = [
-  "AI-powered answer analysis",
-  "Real-time clarity & confidence scoring",
-  "Track progress over time",
+  'AI-powered answer analysis',
+  'Real-time clarity & confidence scoring',
+  'Track progress over time',
 ];
 
 export default function LoginPage() {
@@ -19,21 +19,21 @@ export default function LoginPage() {
   const { lang, toggle, theme, toggleTheme } = useLangStore();
   const T = translations[lang];
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError("");
+    setError('');
     setLoading(true);
     try {
       const tokens = await login(email, password);
       useAuthStore.getState().setTokens(tokens.access_token, tokens.refresh_token);
       const user = await getMe();
       storeLogin(user, tokens.access_token, tokens.refresh_token);
-      const from = (location.state as any)?.from?.pathname || "/dashboard";
+      const from = (location.state as any)?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(err.response?.data?.detail || T.err_login);
@@ -55,9 +55,19 @@ export default function LoginPage() {
           <span className="text-xl font-bold tracking-tight">InterviewAI</span>
         </div>
         <div className="mt-auto z-10">
-          <img src="/interview-1.png" alt="Interview illustration" className="w-64 mx-auto mb-8 opacity-90 drop-shadow-xl" />
-          <h2 className="text-4xl font-bold leading-tight mb-4">Ace your<br />next interview</h2>
-          <p className="text-indigo-200 text-[15px] mb-10 leading-relaxed">Record answers, get instant AI feedback, and track your improvement over time.</p>
+          <img
+            src="/interview-1.png"
+            alt="Interview illustration"
+            className="w-64 mx-auto mb-8 opacity-90 drop-shadow-xl"
+          />
+          <h2 className="text-4xl font-bold leading-tight mb-4">
+            Ace your
+            <br />
+            next interview
+          </h2>
+          <p className="text-indigo-200 text-[15px] mb-10 leading-relaxed">
+            Record answers, get instant AI feedback, and track your improvement over time.
+          </p>
           <div className="space-y-3.5">
             {FEATURES.map((f) => (
               <div key={f} className="flex items-center gap-3">
@@ -80,10 +90,16 @@ export default function LoginPage() {
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{T.login_subtitle}</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={toggleTheme} className="rounded-lg border border-gray-200 dark:border-gray-700 p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+              <button
+                onClick={toggleTheme}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
               </button>
-              <button onClick={toggle} className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              <button
+                onClick={toggle}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
                 {T.lang_switch}
               </button>
             </div>
@@ -98,29 +114,55 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{T.field_email}</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-400 focus:bg-white focus:ring-3 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 dark:focus:border-indigo-500 dark:focus:bg-gray-800 dark:focus:ring-indigo-900/40" />
+              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {T.field_email}
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-400 focus:bg-white focus:ring-3 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 dark:focus:border-indigo-500 dark:focus:bg-gray-800 dark:focus:ring-indigo-900/40"
+              />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{T.field_password}</label>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-400 focus:bg-white focus:ring-3 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 dark:focus:border-indigo-500 dark:focus:bg-gray-800 dark:focus:ring-indigo-900/40" />
+              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {T.field_password}
+              </label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-400 focus:bg-white focus:ring-3 focus:ring-indigo-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 dark:focus:border-indigo-500 dark:focus:bg-gray-800 dark:focus:ring-indigo-900/40"
+              />
             </div>
-            <button type="submit" disabled={loading}
-              className="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-60 active:scale-[0.98]">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-60 active:scale-[0.98]"
+            >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   {T.btn_signin_loading}
                 </span>
-              ) : T.btn_signin}
+              ) : (
+                T.btn_signin
+              )}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-            {T.link_no_account}{" "}
-            <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">{T.link_create}</Link>
+            {T.link_no_account}{' '}
+            <Link
+              to="/register"
+              className="font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+            >
+              {T.link_create}
+            </Link>
           </p>
         </div>
       </div>

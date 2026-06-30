@@ -1,22 +1,22 @@
-import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={`shimmer ${className ?? ""}`} />;
+  return <div className={`shimmer ${className ?? ''}`} />;
 }
 
 export function LoadingSpinner({ size = 20, className }: { size?: number; className?: string }) {
   return (
     <span
-      className={`block animate-spin rounded-full border-2 border-indigo-100 border-t-indigo-600 dark:border-indigo-800 dark:border-t-indigo-400 ${className ?? ""}`}
+      className={`block animate-spin rounded-full border-2 border-indigo-100 border-t-indigo-600 dark:border-indigo-800 dark:border-t-indigo-400 ${className ?? ''}`}
       style={{ width: size, height: size }}
     />
   );
 }
 
 export function ErrorState({
-  message = "Something went wrong.",
+  message = 'Something went wrong.',
   onRetry,
 }: {
   message?: string;
@@ -58,7 +58,9 @@ export function EmptyState({
         <Icon size={28} className="text-gray-400 dark:text-gray-500" />
       </div>
       <p className="text-base font-semibold text-gray-700 dark:text-gray-300">{title}</p>
-      {description && <p className="mt-1.5 text-sm text-gray-400 dark:text-gray-500 max-w-xs">{description}</p>}
+      {description && (
+        <p className="mt-1.5 text-sm text-gray-400 dark:text-gray-500 max-w-xs">{description}</p>
+      )}
       {action && <div className="mt-5">{action}</div>}
     </div>
   );
